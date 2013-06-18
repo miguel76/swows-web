@@ -3,6 +3,7 @@
 	<name>swows-web</name>
 	<comment></comment>
 	<projects>
+		<project>swows</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
