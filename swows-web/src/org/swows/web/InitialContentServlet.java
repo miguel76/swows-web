@@ -48,7 +48,7 @@ public class InitialContentServlet extends HttpServlet {
 		String dfUri = request.getParameter("dataflow");
 		DOMImplementation domImpl;
 		try {
-			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("1.1");
+			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
 		} catch (ClassNotFoundException e) {
 			throw new ServletException(e);
 		} catch (InstantiationException e) {
@@ -60,7 +60,9 @@ public class InitialContentServlet extends HttpServlet {
 		}
 		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
 
-		response.setContentType("text/html");
+		
+		response.setContentType("image/svg+xml");
+//		response.setContentType("text/html");
 	    OutputStream out = response.getOutputStream();
       	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
         		"3.0");
