@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.swows.datatypes.SmartFileManager;
 import org.swows.graph.DynamicDatasetMap;
 import org.swows.graph.events.DynamicGraph;
 import org.swows.graph.events.DynamicGraphFromGraph;
@@ -26,6 +27,10 @@ import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
+
+import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.query.DatasetFactory;
 
 /**
  * Servlet implementation class InitialContentServlet
@@ -58,8 +63,11 @@ public class InitialContentServlet extends HttpServlet {
 		} catch (ClassCastException e) {
 			throw new ServletException(e);
 		}
-		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
-
+//		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
+		Dataset dfDataset = DatasetFactory.create(dfUri, SmartFileManager.get());
+		final Graph dfGraph = dfDataset.asDatasetGraph().getDefaultGraph();
+		WebApp webApp = new WebApp(dfGraph);
+		Document resultDoc = webApp.getDocument();
 		
 		response.setContentType("image/svg+xml");
 //		response.setContentType("text/html");

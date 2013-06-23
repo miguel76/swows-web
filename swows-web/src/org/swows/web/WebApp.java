@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.ServletException;
+
 import org.apache.batik.dom.events.DOMMutationEvent;
 import org.apache.batik.dom.svg.SVGDOMImplementation;
 import org.apache.batik.swing.JSVGCanvas;
@@ -37,9 +39,11 @@ import org.swows.xmlinrdf.DocumentReceiver;
 import org.swows.xmlinrdf.DomDecoder2;
 import org.swows.xmlinrdf.DomEventListener;
 import org.swows.xmlinrdf.EventManager;
+import org.w3c.dom.Attr;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
@@ -59,11 +63,17 @@ public class WebApp implements EventManager {
 	private Document document = null;
 //	private boolean docToBeRealoaded = false;
 	
-	private static String JS_CALLBACK = "swowsEvent()";
+	private static String JS_CALLBACK_FUNCTION = "swowsEvent";
+	private static String JS_CALLBACK = JS_CALLBACK_FUNCTION + "()";
 	
 	private StringBuffer clientCommandsCache = null;
 	private static final int CLIENT_COMMANDS_CACHE_CAPACITY = 256;
 	private static final String CLIENT_COMMANDS_SEP = ";";
+	
+	// TODO: it would be possible useful to use deflate/inflate for client server communication
+	// Server-side: http://docs.oracle.com/javase/1.5.0/docs/api/java/util/zip/Deflater.html
+	// Client-side: https://github.com/dankogai/js-deflate
+	// Maybe for http is possible to use browser native decompression
 	
 	private void addClientCommand(String command) {
 		if (command != null) {
@@ -116,7 +126,18 @@ public class WebApp implements EventManager {
 		cachingGraph = new EventCachingGraph(outputGraph);
 //		cachingGraph = new EventCachingGraph( new LoggingGraph(outputGraph, Logger.getRootLogger(), true, true) );
         
-		DOMImplementation domImpl = SVGDOMImplementation.getDOMImplementation();
+		DOMImplementation domImpl;
+		try {
+			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		} catch (InstantiationException e) {
+			throw new RuntimeException(e);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		} catch (ClassCastException e) {
+			throw new RuntimeException(e);
+		}
                 
 		Set<DomEventListener> domEventListenerSet = new HashSet <DomEventListener>();
 		domEventListenerSet.add(mouseInput);
@@ -168,6 +189,10 @@ public class WebApp implements EventManager {
                                                                 
 						},
 						domEventListeners, this);
+		
+		document.getDocumentElement().setAttribute(
+				"onload",
+				"var swowsEvent = function () {	window.alert('Event!'); }; " + genAddEventListeners() + " alert('loaded');");
 
      /*   EventTarget t = (EventTarget) xmlDoc;
 
@@ -338,22 +363,82 @@ public class WebApp implements EventManager {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	private String clientElementIdentifier(Element element) {
+		NamedNodeMap attrs = element.getAttributes();
+		for (int attrIndex = 0; attrIndex < attrs.getLength(); attrIndex++ ) {
+			Attr attr = (Attr) attrs.item(attrIndex);
+			if (attr.isId() 
+					|| attr.getName().equalsIgnoreCase("id") // TODO: delete this two lines of workaround and find better way to manage id attrs
+					|| attr.getName().equals("xml:id") )
+				return "document.getElementById('" + attr.getValue() + "')";
+		}
+		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
+	}
+	
+	Map<org.w3c.dom.Node, Set<String>> listenedNodeAndTypes = new HashMap<org.w3c.dom.Node, Set<String>>();
 
+	private String genAddEventListener(
+			org.w3c.dom.Node target,
+			String type,
+			boolean useCapture) {
+		if (target instanceof Element) {
+			return clientElementIdentifier((Element) target)
+								+ ".addEventListener( '"
+								+ type + "', "
+								+ JS_CALLBACK_FUNCTION + ", "
+								+ useCapture + " )";
+		}
+		return "";
+	}
+	
+	private String genAddEventListeners() {
+		StringBuffer buffer = new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
+		for (org.w3c.dom.Node target : listenedNodeAndTypes.keySet())
+			for (String type : listenedNodeAndTypes.get(target))
+				buffer
+						.append( genAddEventListener(target, type, false) )
+						.append( CLIENT_COMMANDS_SEP ); // TODO: manage useCapture if to be used at all
+		return buffer.toString();
+	}
+	
 	@Override
 	public void addEventListener(org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
-		if (target instanceof Element)
-			((Element) target).setAttribute("on" + type, JS_CALLBACK);
-		// TODO Auto-generated method stub
-		
+//			((Element) target).setAttribute("on" + type, JS_CALLBACK);
+		Set<String> listenedTypesForTarget = listenedNodeAndTypes.get(target);
+		if (listenedTypesForTarget == null) {
+			listenedTypesForTarget = new HashSet<String>();
+			listenedNodeAndTypes.put(target, listenedTypesForTarget);
+		}
+		listenedTypesForTarget.add(type);
+		if (docLoadedOnClient)
+			addClientCommand( genAddEventListener(target, type, useCapture) );
 	}
 
 	@Override
 	public void removeEventListener(org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
-		// TODO Auto-generated method stub
-		
+		Set<String> listenedTypesForTarget = listenedNodeAndTypes.get(target);
+		if (listenedTypesForTarget != null) {
+			listenedTypesForTarget.remove(type);
+			if (listenedTypesForTarget.isEmpty())
+				listenedNodeAndTypes.remove(target);
+		}
+		if (target instanceof Element) {
+//			((Element) target).removeAttribute("on" + type);
+			if (docLoadedOnClient)
+				addClientCommand(
+						clientElementIdentifier((Element) target)
+								+ ".removeEventListener( '"
+								+ type + "', "
+								+ JS_CALLBACK_FUNCTION + ", "
+								+ useCapture + " )");
+		}
 	}
 
+	public Document getDocument() {
+		return document;
+	}
 	
 }
