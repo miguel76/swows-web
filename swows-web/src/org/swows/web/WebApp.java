@@ -4,10 +4,15 @@ import java.awt.Color;
 import java.awt.GraphicsConfiguration;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,6 +55,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
@@ -66,9 +72,28 @@ public class WebApp implements EventManager {
 	private Document document = null;
 //	private boolean docToBeRealoaded = false;
 	private DOMImplementation domImpl;
+	private final WebInput webInput = new WebInput();
 	
-	private static String JS_CALLBACK_FUNCTION = "swowsEvent";
-	private static String JS_CALLBACK = JS_CALLBACK_FUNCTION + "()";
+	private static final String JS_CALLBACK_FUNCTION_NAME = "swowsEvent";
+	private static final String JS_CALLBACK = JS_CALLBACK_FUNCTION_NAME + "()";
+//	private static final String JS_CALLBACK_BODY = "var req = new XMLHttpRequest(); req.open('POST','',false); req.send(evt);";
+	private static final String JS_CALLBACK_BODY =
+			"var reqTxt = '" +
+					"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
+					"_:newEvent a evt:Event; '; " +
+//			"for (var i = 0; i < evt.length; i++) { " +
+//				"reqText += '<' + evt[i] + '>'; " +
+//			"} " +
+			"reqTxt += '" +
+					"evt:target <' + tn(evt.target).getAttribute('resource') + '>; " +
+					"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '>; " +
+					"evt:type \"' + evt.type + '\".'; " +
+			"var req = new XMLHttpRequest(); req.open('POST','',false); " +
+			"req.send(reqTxt); " +
+			"alert(req.responseText); "; // TODO:will be eval instead of alert
+	private static final String JS_TARGET_CB_FUNCTION = "var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t }; ";
+	private static final String CHARACTER_ENCODING = "UTF-8";
+	private static final String JS_CONTENT_TYPE = "application/javascript";
 	
 	private StringBuffer clientCommandsCache = null;
 	private static final int CLIENT_COMMANDS_CACHE_CAPACITY = 256;
@@ -88,170 +113,11 @@ public class WebApp implements EventManager {
 			clientCommandsCache.append(CLIENT_COMMANDS_SEP);
 		}
 	}
-
-	public WebApp(
-			Graph dataflowGraph//,
-			) {
-		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
-			@Override
-			public synchronized void run(final Runnable runnable) {
-//				try {
-					while (!docLoadedOnClient || cachingGraph == null) Thread.yield();
-//					final long start = System.currentTimeMillis();
-					runnable.run();
-//							long afterCascade = System.currentTimeMillis();
-//							System.out.println(
-//									"RDF envent cascade executed in "
-//											+ (afterCascade - runEntered) + "ms" );
-					cachingGraph.sendEvents();
-//							long afterSvgDom = System.currentTimeMillis();
-//							System.out.println(
-//									"SVG DOM updated in "
-//											+ (afterSvgDom - afterCascade) + "ms" );
-//					long runFinished = System.currentTimeMillis();
-//					System.out.println(
-//							"SVG updated and repainted in "
-//									+ (runFinished - start + "ms" ) );
-					if (!docLoadedOnClient) {
-						askForReload();
-					}
-//				} catch(InterruptedException e) {
-//					throw new RuntimeException(e);
-//				}
-			}
-
-		});
-    	final WebInput mouseInput = new WebInput();
-//    	final SystemTime systemTime = new SystemTime();
-    	final DynamicDatasetMap inputDatasetGraph = new DynamicDatasetMap(mouseInput.getGraph());
-    	inputDatasetGraph.addGraph(Node.createURI(SWI.getURI() + "mouseEvents"), mouseInput.getGraph());
-		DataflowProducer applyOps =	new DataflowProducer(new DynamicGraphFromGraph(dataflowGraph), inputDatasetGraph);
-		DynamicGraph outputGraph = applyOps.createGraph(inputDatasetGraph);
-		cachingGraph = new EventCachingGraph(outputGraph);
-//		cachingGraph = new EventCachingGraph( new LoggingGraph(outputGraph, Logger.getRootLogger(), true, true) );
-        
-		try {
-			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
-		} catch (ClassNotFoundException e) {
-			throw new RuntimeException(e);
-		} catch (InstantiationException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
-		} catch (ClassCastException e) {
-			throw new RuntimeException(e);
-		}
-                
-		Set<DomEventListener> domEventListenerSet = new HashSet <DomEventListener>();
-		domEventListenerSet.add(mouseInput);
-		Map<String,Set<DomEventListener>> domEventListeners = new HashMap <String,Set<DomEventListener>>();
-		domEventListeners.put("click", domEventListenerSet);
-		domEventListeners.put("mousedown", domEventListenerSet);
-		domEventListeners.put("mouseup", domEventListenerSet);
-                
-		document =
-				DomDecoder2.decodeOne(
-						cachingGraph,
-//						outputGraph,
-//						new LoggingGraph(cachingGraph, Logger.getRootLogger(), true, true),
-						domImpl /*,
-						new RunnableContext() {
-							@Override
-							public void run(Runnable runnable) {
-								try {
-									batikRunnableQueue.invokeAndWait(runnable);
-								} catch(InterruptedException e) {
-									throw new RuntimeException(e);
-								}
-							}
-						} */,
-						new DocumentReceiver() {
-//							{
-//								(new Thread() {
-//									public void run() {
-//										while (true) {
-//											while (newDocument == null) yield();
-//											RunnableQueue runnableQueue = batikRunnableQueue;
-//											runnableQueue.suspendExecution(true);
-//											batikRunnableQueue = null;
-////											batikRunnableQueue.getThread().halt();
-////											batikRunnableQueue = null;
-//											svgCanvas.setDocument(newDocument);
-//											newDocument = null;
-//											batikRunnableQueue.resumeExecution();
-//										}
-//									}
-//								}).start();
-//							}
-//							private Document newDocument = null;
-							@Override
-							public void sendDocument(Document doc) {
-								document = doc;
-								docLoadedOnClient = false;
-							}
-                                                                
-						},
-						domEventListeners, this);
+	
+	private void addDOMListeners() {
 		
-		document.getDocumentElement().setAttribute(
-				"onload",
-				"var swowsEvent = function () {	window.alert('Event!'); }; " + genAddEventListeners() + " alert('loaded');");
-
-     /*   EventTarget t = (EventTarget) xmlDoc;
-
-        if (EventsProducer.getEventsProducer() == null) {
-            try {
-                             
-              EventsProducer.setEventsProducer();      
-            } catch (java.lang.ExceptionInInitializerError ex) {
-                ex.printStackTrace();
-                ex.getCause();
-            }
-        }
-
-       t.addEventListener("click", new EventListener() {
-
-            public void handleEvent(Event evt) {
-                EventsProducer.getEventsProducer().update(evt);
-                
-            }
-        }, false);
-
-*/
-        
-//        DOMImplementation implementation = null;
-//		try {
-//			implementation = DOMImplementationRegistry.newInstance()
-//					.getDOMImplementation("XML 3.0");
-//		} catch (ClassCastException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		} catch (ClassNotFoundException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		} catch (InstantiationException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		} catch (IllegalAccessException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
-//      	DOMImplementationLS feature = (DOMImplementationLS) implementation.getFeature("LS",
-//        		"3.0");
-//        LSSerializer serializer = feature.createLSSerializer();
-//        LSOutput output = feature.createLSOutput();
-////        output.setByteStream(System.out);
-//        
-//        OutputStream os;
-//		try {
-//			os = new FileOutputStream("/home/miguel/tmp/Result.svg");
-//		} catch (FileNotFoundException e) {
-//			e.printStackTrace();
-//			throw new RuntimeException(e);
-//		}
-//        output.setByteStream(os);
-//        serializer.write(xmlDoc, output);
-        
+		//TODO: quite everything to be done here
+		
         EventListener domEventListener =
 				new EventListener() {
 					@Override
@@ -320,17 +186,145 @@ public class WebApp implements EventManager {
 //						"DOMNodeInserted",
 //						domEventListener,
 //						false);
-////        ((EventTarget) xmlDoc)
-////				.addEventListener(
-////						"DOMAttrModified",
-////						domEventListener,
-////						false);
+				
+        ((EventTarget) document)
+				.addEventListener(
+						"DOMAttrModified",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								DOMMutationEvent domEvent = (DOMMutationEvent) event;
+//								() domEvent.getTarget();
+								System.out.println("Attr Name: " + domEvent.getAttrName());
+								System.out.println("Attr Change Type: " + domEvent.getAttrChange());
+								System.out.println("Attr New Value: " + domEvent.getNewValue());
+								System.out.println("Attr Prev Value: " + domEvent.getPrevValue());
+								
+							}
+						},
+						false);
 //        ((EventTarget) xmlDoc)
 //				.addEventListener(
 //						"DOMCharacterDataModified",
 //						domEventListener,
 //						false);
 
+		
+	}
+	
+	private void setDocument(Document newDocument) {
+		document = newDocument;
+		document.getDocumentElement().setAttribute(
+				"onload",
+				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + JS_CALLBACK_BODY +" }; " + genAddEventListeners() + " alert('loaded');");
+		addDOMListeners();
+	}
+
+	public WebApp(
+			Graph dataflowGraph//,
+			) {
+		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
+			@Override
+			public synchronized void run(final Runnable runnable) {
+//				try {
+					while (!docLoadedOnClient || cachingGraph == null) Thread.yield();
+//					final long start = System.currentTimeMillis();
+					runnable.run();
+//							long afterCascade = System.currentTimeMillis();
+//							System.out.println(
+//									"RDF envent cascade executed in "
+//											+ (afterCascade - runEntered) + "ms" );
+					cachingGraph.sendEvents();
+//							long afterSvgDom = System.currentTimeMillis();
+//							System.out.println(
+//									"SVG DOM updated in "
+//											+ (afterSvgDom - afterCascade) + "ms" );
+//					long runFinished = System.currentTimeMillis();
+//					System.out.println(
+//							"SVG updated and repainted in "
+//									+ (runFinished - start + "ms" ) );
+					if (!docLoadedOnClient) {
+						askForReload();
+					}
+//				} catch(InterruptedException e) {
+//					throw new RuntimeException(e);
+//				}
+			}
+
+		});
+//    	final WebInput webInput = new WebInput();
+//    	final SystemTime systemTime = new SystemTime();
+    	final DynamicDatasetMap inputDatasetGraph = new DynamicDatasetMap(webInput.getGraph());
+    	inputDatasetGraph.addGraph(Node.createURI(SWI.getURI() + "mouseEvents"), webInput.getGraph());
+		DataflowProducer applyOps =	new DataflowProducer(new DynamicGraphFromGraph(dataflowGraph), inputDatasetGraph);
+		DynamicGraph outputGraph = applyOps.createGraph(inputDatasetGraph);
+		cachingGraph = new EventCachingGraph(outputGraph);
+//		cachingGraph = new EventCachingGraph( new LoggingGraph(outputGraph, Logger.getRootLogger(), true, true) );
+        
+		try {
+			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
+		} catch (ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		} catch (InstantiationException e) {
+			throw new RuntimeException(e);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		} catch (ClassCastException e) {
+			throw new RuntimeException(e);
+		}
+                
+//		Set<DomEventListener> domEventListenerSet = new HashSet <DomEventListener>();
+//		domEventListenerSet.add(mouseInput);
+//		Map<String,Set<DomEventListener>> domEventListeners = new HashMap <String,Set<DomEventListener>>();
+//		domEventListeners.put("click", domEventListenerSet);
+//		domEventListeners.put("mousedown", domEventListenerSet);
+//		domEventListeners.put("mouseup", domEventListenerSet);
+                
+		setDocument(
+				DomDecoder2.decodeOne(
+						cachingGraph,
+//						outputGraph,
+//						new LoggingGraph(cachingGraph, Logger.getRootLogger(), true, true),
+						domImpl /*,
+						new RunnableContext() {
+							@Override
+							public void run(Runnable runnable) {
+								try {
+									batikRunnableQueue.invokeAndWait(runnable);
+								} catch(InterruptedException e) {
+									throw new RuntimeException(e);
+								}
+							}
+						} */,
+						new DocumentReceiver() {
+//							{
+//								(new Thread() {
+//									public void run() {
+//										while (true) {
+//											while (newDocument == null) yield();
+//											RunnableQueue runnableQueue = batikRunnableQueue;
+//											runnableQueue.suspendExecution(true);
+//											batikRunnableQueue = null;
+////											batikRunnableQueue.getThread().halt();
+////											batikRunnableQueue = null;
+//											svgCanvas.setDocument(newDocument);
+//											newDocument = null;
+//											batikRunnableQueue.resumeExecution();
+//										}
+//									}
+//								}).start();
+//							}
+//							private Document newDocument = null;
+							@Override
+							public void sendDocument(Document doc) {
+								setDocument(doc);
+								docLoadedOnClient = false;
+							}
+                                                                
+						},
+//						domEventListeners,
+						this));
+		
 
 //        TransformerFactory transformerFactory = TransformerFactory.newInstance();
 //		Transformer transformer;
@@ -372,7 +366,7 @@ public class WebApp implements EventManager {
 			return clientElementIdentifier((Element) target)
 								+ ".addEventListener( '"
 								+ type + "', "
-								+ JS_CALLBACK_FUNCTION + ", "
+								+ JS_CALLBACK_FUNCTION_NAME + ", "
 								+ useCapture + " )";
 		}
 		return "";
@@ -389,7 +383,8 @@ public class WebApp implements EventManager {
 	}
 	
 	@Override
-	public void addEventListener(org.w3c.dom.Node target, String type,
+	public void addEventListener(
+			Node targetNode, org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
 //			((Element) target).setAttribute("on" + type, JS_CALLBACK);
 		Set<String> listenedTypesForTarget = listenedNodeAndTypes.get(target);
@@ -403,7 +398,8 @@ public class WebApp implements EventManager {
 	}
 
 	@Override
-	public void removeEventListener(org.w3c.dom.Node target, String type,
+	public void removeEventListener(
+			Node targetNode, org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
 		Set<String> listenedTypesForTarget = listenedNodeAndTypes.get(target);
 		if (listenedTypesForTarget != null) {
@@ -418,7 +414,7 @@ public class WebApp implements EventManager {
 						clientElementIdentifier((Element) target)
 								+ ".removeEventListener( '"
 								+ type + "', "
-								+ JS_CALLBACK_FUNCTION + ", "
+								+ JS_CALLBACK_FUNCTION_NAME + ", "
 								+ useCapture + " )");
 		}
 	}
@@ -439,9 +435,33 @@ public class WebApp implements EventManager {
 		sendEntireDocument(response);
 	}
 	
-	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	public synchronized void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		response.setContentType(JS_CONTENT_TYPE);
+		response.setCharacterEncoding(CHARACTER_ENCODING);
+//		response.setContentType("text/html");
+	    OutputStream out = response.getOutputStream();
+	    Writer writer = new OutputStreamWriter(out,CHARACTER_ENCODING);
+	    
+	    BufferedReader eventReader = request.getReader();
+	    StringBuffer eventSB = new StringBuffer();
+	    while (true) {
+	    	String eventLine = eventReader.readLine();
+	    	if (eventLine == null)
+	    		break;
+	    	eventSB.append(eventLine);
+	    }
+	    webInput.handleEvent(eventSB.toString());
+	    
+	    if (clientCommandsCache != null) {
+	    	writer.write(clientCommandsCache.toString());
+	    	clientCommandsCache = null;
+		    writer.flush();
+	    }	    
+	    // copying input to output just to test it
+	    //writer.write(eventSB.toString());
+//	    writer.flush();
 	}
-	
+
 //	public Document getDocument() {
 //		return document;
 //	}

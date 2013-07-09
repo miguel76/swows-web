@@ -19,6 +19,7 @@
  */
 package org.swows.web;
 
+import java.io.StringReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.TimerTask;
 import org.apache.log4j.Logger;
 import org.swows.graph.events.DynamicGraph;
 import org.swows.graph.events.DynamicGraphFromGraph;
+import org.swows.reader.RdfReaderFactory;
 import org.swows.runnable.LocalTimer;
 import org.swows.runnable.RunnableContextFactory;
 import org.swows.util.GraphUtils;
@@ -36,16 +38,28 @@ import org.swows.xmlinrdf.DomEventListener;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.events.Event;
+import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 import org.w3c.dom.events.MouseEvent;
 
 import com.hp.hpl.jena.graph.GraphMaker;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.impl.SimpleGraphMaker;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.RDFReader;
+import com.hp.hpl.jena.rdf.model.RDFReaderF;
+import com.hp.hpl.jena.rdf.model.ResIterator;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
+import com.hp.hpl.jena.rdf.model.impl.RDFReaderFImpl;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
-public class WebInput {
+public class WebInput implements DomEventListener {
+
+	private static final String DEFAULT_BASE = "";
 
 	private static GraphMaker graphMaker = new SimpleGraphMaker(); 
 
@@ -98,83 +112,171 @@ public class WebInput {
 		return eventGraph;
 	}
 	
-	public synchronized void handleEvent(String eventString) {
-		buildGraph();
+	private static class EventWithDescriptor implements Event {
 		
-//		GraphFactory.
+//		private String descriptor;
+//		private Model model;
+		private Resource eventResource;
+		
+		public EventWithDescriptor(Resource eventResource) {
+			this.eventResource = eventResource;
+		}
+		
+		@Override
+		public boolean getBubbles() {
+			// TODO Auto-generated method stub
+			return false;
+		}
 
-			Node eventNode = Node.createURI(DOMEvents.getInstanceURI() + "event_" + event.hashCode());
-			eventGraph.add( new Triple( eventNode, RDF.type.asNode(), DOMEvents.Event.asNode() ) );
-			eventGraph.add( new Triple( eventNode, RDF.type.asNode(), DOMEvents.UIEvent.asNode() ) );
-			eventGraph.add( new Triple( eventNode, RDF.type.asNode(), DOMEvents.MouseEvent.asNode() ) );
+		@Override
+		public boolean getCancelable() {
+			// TODO Auto-generated method stub
+			return false;
+		}
 
-			eventGraph.add( new Triple( eventNode, DOMEvents.currentTarget.asNode(), currentTargetGraphNode ));
-			eventGraph.add( new Triple( eventNode, DOMEvents.target.asNode(), targetGraphNode ));
-//			for (Node targetNode : domNodes)
-//				mouseEventGraph.add( new Triple( eventNode, DOMEvents.target.asNode(), targetNode ));
+		@Override
+		public EventTarget getCurrentTarget() {
+			// TODO Auto-generated method stub
+			return null;
+		}
 
-			GraphUtils.addIntegerProperty(
-					eventGraph, eventNode,
-					DOMEvents.timeStamp.asNode(), event.getTimeStamp());
+		@Override
+		public boolean getDefaultPrevented() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public short getEventPhase() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public String getNamespaceURI() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public EventTarget getTarget() {
+			// TODO Auto-generated method stub
+			eventResource.getRequiredProperty(DOMEvents.target);
+			return null;
+		}
+
+		@Override
+		public long getTimeStamp() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public String getType() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void initEvent(String arg0, boolean arg1, boolean arg2) {
+			// TODO Auto-generated method stub
 			
-			GraphUtils.addIntegerProperty(
-					eventGraph, eventNode,
-					DOMEvents.detail.asNode(), mouseEvent.getDetail());
+		}
+
+		@Override
+		public void initEventNS(String arg0, String arg1, boolean arg2,
+				boolean arg3) {
+			// TODO Auto-generated method stub
 			
-//		    public static final Property target = property( "target" );
-//		    public static final Property currentTarget = property( "currentTarget" );
+		}
 
-//		    public static final Property button = property( "button" );
-//		    public static final Property relatedTarget = property( "relatedTarget" );
+		@Override
+		public void preventDefault() {
+			// TODO Auto-generated method stub
 			
-			GraphUtils.addDecimalProperty(
-					eventGraph, eventNode,
-					DOMEvents.screenX.asNode(), mouseEvent.getScreenX());
-			GraphUtils.addDecimalProperty(
-					eventGraph, eventNode,
-					DOMEvents.screenY.asNode(), mouseEvent.getScreenY());
-			GraphUtils.addDecimalProperty(
-					eventGraph, eventNode,
-					DOMEvents.clientX.asNode(), mouseEvent.getClientX());
-			GraphUtils.addDecimalProperty(
-					eventGraph, eventNode,
-					DOMEvents.clientY.asNode(), mouseEvent.getClientY());
+		}
 
-			GraphUtils.addBooleanProperty(
-					eventGraph, eventNode,
-					DOMEvents.ctrlKey.asNode(), mouseEvent.getCtrlKey());
-			GraphUtils.addBooleanProperty(
-					eventGraph, eventNode,
-					DOMEvents.shiftKey.asNode(), mouseEvent.getShiftKey());
-			GraphUtils.addBooleanProperty(
-					eventGraph, eventNode,
-					DOMEvents.altKey.asNode(), mouseEvent.getAltKey());
-			GraphUtils.addBooleanProperty(
-					eventGraph, eventNode,
-					DOMEvents.metaKey.asNode(), mouseEvent.getMetaKey());
+		@Override
+		public void stopImmediatePropagation() {
+			// TODO Auto-generated method stub
+			
+		}
 
-			GraphUtils.addIntegerProperty(
-					eventGraph, eventNode,
-					DOMEvents.button.asNode(), mouseEvent.getButton());
-
-			logger.debug("Launching update thread... ");
-			LocalTimer.get().schedule(
-					new TimerTask() {
-						@Override
-						public void run() {
-							RunnableContextFactory.getDefaultRunnableContext().run(
-									new Runnable() {
-										@Override
-										public void run() {
-											logger.debug("Sending update events ... ");
-											eventGraph.sendUpdateEvents();
-											logger.debug("Update events sent!");
-										}
-									} );
-						}
-					}, 0 );
-			logger.debug("Update thread launched!");
-//		}
+		@Override
+		public void stopPropagation() {
+			// TODO Auto-generated method stub
+			
+		}
+		
+	}
+	
+	public static void handleEvent(String eventString, EventListener listener) {
+		RDFReaderF readerFactory = new RDFReaderFImpl();
+		RDFReader reader = readerFactory.getReader("N3");
+		Model model = ModelFactory.createDefaultModel();
+		reader.read(
+				model,
+				new StringReader(eventString),
+				DEFAULT_BASE);
+		ResIterator eventResources = model.listResourcesWithProperty(RDF.type, DOMEvents.Event);
+		while(eventResources.hasNext()) {
+			listener.handleEvent(new EventWithDescriptor(eventResources.next()));
+		}
+	}
+	
+	public void handleEvent(String eventString) {
+		buildGraph();
+		RDFReaderF readerFactory = new RDFReaderFImpl();
+		RDFReader reader = readerFactory.getReader("N3");
+		Model model = ModelFactory.createModelForGraph(eventGraph);
+		reader.read(
+				model,
+				new StringReader(eventString),
+				DEFAULT_BASE);
+		logger.debug("Launching update thread... ");
+		LocalTimer.get().schedule(
+				new TimerTask() {
+					@Override
+					public void run() {
+						RunnableContextFactory.getDefaultRunnableContext().run(
+								new Runnable() {
+									@Override
+									public void run() {
+										logger.debug("Sending update events ... ");
+										eventGraph.sendUpdateEvents();
+										logger.debug("Update events sent!");
+									}
+								} );
+					}
+				}, 0 );
+		logger.debug("Update thread launched!");
+	}
+	
+	@Override
+	public synchronized void handleEvent(Event event, Node currentTargetGraphNode , Node targetGraphNode) {
+		Resource eventResource = ((EventWithDescriptor) event).eventResource;
+		buildGraph();
+		StmtIterator closure = eventResource.listProperties();
+		while(closure.hasNext()) {
+			eventGraph.add(closure.nextStatement().asTriple());
+		}
+		logger.debug("Launching update thread... ");
+		LocalTimer.get().schedule(
+				new TimerTask() {
+					@Override
+					public void run() {
+						RunnableContextFactory.getDefaultRunnableContext().run(
+								new Runnable() {
+									@Override
+									public void run() {
+										logger.debug("Sending update events ... ");
+										eventGraph.sendUpdateEvents();
+										logger.debug("Update events sent!");
+									}
+								} );
+					}
+				}, 0 );
+		logger.debug("Update thread launched!");
 	}
 
 }
