@@ -6,6 +6,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.batik.dom.events.DOMMutationEvent;
 import org.apache.batik.dom.svg.SVGDOMImplementation;
@@ -62,6 +65,7 @@ public class WebApp implements EventManager {
 	private boolean docLoadedOnClient = false;
 	private Document document = null;
 //	private boolean docToBeRealoaded = false;
+	private DOMImplementation domImpl;
 	
 	private static String JS_CALLBACK_FUNCTION = "swowsEvent";
 	private static String JS_CALLBACK = JS_CALLBACK_FUNCTION + "()";
@@ -117,16 +121,15 @@ public class WebApp implements EventManager {
 			}
 
 		});
-    	final MouseInput mouseInput = new MouseInput();
-    	final SystemTime systemTime = new SystemTime();
-    	final DynamicDatasetMap inputDatasetGraph = new DynamicDatasetMap(systemTime.getGraph());
+    	final WebInput mouseInput = new WebInput();
+//    	final SystemTime systemTime = new SystemTime();
+    	final DynamicDatasetMap inputDatasetGraph = new DynamicDatasetMap(mouseInput.getGraph());
     	inputDatasetGraph.addGraph(Node.createURI(SWI.getURI() + "mouseEvents"), mouseInput.getGraph());
 		DataflowProducer applyOps =	new DataflowProducer(new DynamicGraphFromGraph(dataflowGraph), inputDatasetGraph);
 		DynamicGraph outputGraph = applyOps.createGraph(inputDatasetGraph);
 		cachingGraph = new EventCachingGraph(outputGraph);
 //		cachingGraph = new EventCachingGraph( new LoggingGraph(outputGraph, Logger.getRootLogger(), true, true) );
         
-		DOMImplementation domImpl;
 		try {
 			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
 		} catch (ClassNotFoundException e) {
@@ -270,24 +273,7 @@ public class WebApp implements EventManager {
 				new EventListener() {
 					@Override
 					public void handleEvent(Event event) {
-				        DOMImplementation implementation = null;
-						try {
-							implementation = DOMImplementationRegistry.newInstance()
-									.getDOMImplementation("XML 3.0");
-						} catch (ClassCastException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (ClassNotFoundException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (InstantiationException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						} catch (IllegalAccessException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-				      	DOMImplementationLS feature = (DOMImplementationLS) implementation.getFeature("LS",
+				      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
 				        		"3.0");
 				        LSSerializer serializer = feature.createLSSerializer();
 				        LSOutput output = feature.createLSOutput();
@@ -436,9 +422,28 @@ public class WebApp implements EventManager {
 								+ useCapture + " )");
 		}
 	}
-
-	public Document getDocument() {
-		return document;
+	
+	private void sendEntireDocument(HttpServletResponse response) throws IOException {
+		response.setContentType("image/svg+xml");
+//		response.setContentType("text/html");
+	    OutputStream out = response.getOutputStream();
+      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
+        		"3.0");
+        LSSerializer serializer = feature.createLSSerializer();
+        LSOutput output = feature.createLSOutput();
+        output.setByteStream(out);
+        serializer.write(document, output);
 	}
+
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		sendEntireDocument(response);
+	}
+	
+	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	}
+	
+//	public Document getDocument() {
+//		return document;
+//	}
 	
 }

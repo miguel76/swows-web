@@ -38,6 +38,7 @@ import com.hp.hpl.jena.query.DatasetFactory;
 @WebServlet("/InitialContentServlet")
 public class InitialContentServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private WebApp webApp = null;
 
     /**
      * Default constructor. 
@@ -46,46 +47,32 @@ public class InitialContentServlet extends HttpServlet {
         // TODO Auto-generated constructor stub
     }
     
+    private WebApp getWebApp(HttpServletRequest request) {
+    	if (webApp == null) {
+    		String dfUri = request.getParameter("dataflow");
+//    		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
+    		Dataset dfDataset = DatasetFactory.create(dfUri, SmartFileManager.get());
+    		final Graph dfGraph = dfDataset.asDatasetGraph().getDefaultGraph();
+    		webApp = new WebApp(dfGraph);
+    	}
+    	return webApp;
+    }
+    
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		String dfUri = request.getParameter("dataflow");
-		DOMImplementation domImpl;
-		try {
-			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
-		} catch (ClassNotFoundException e) {
-			throw new ServletException(e);
-		} catch (InstantiationException e) {
-			throw new ServletException(e);
-		} catch (IllegalAccessException e) {
-			throw new ServletException(e);
-		} catch (ClassCastException e) {
-			throw new ServletException(e);
-		}
-//		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
-		Dataset dfDataset = DatasetFactory.create(dfUri, SmartFileManager.get());
-		final Graph dfGraph = dfDataset.asDatasetGraph().getDefaultGraph();
-		WebApp webApp = new WebApp(dfGraph);
-		Document resultDoc = webApp.getDocument();
-		
-		response.setContentType("image/svg+xml");
-//		response.setContentType("text/html");
-	    OutputStream out = response.getOutputStream();
-      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
-        		"3.0");
-        LSSerializer serializer = feature.createLSSerializer();
-        LSOutput output = feature.createLSOutput();
-        output.setByteStream(out);
-        serializer.write(resultDoc, output);
-
+		WebApp webApp = getWebApp(request);
+//		Document resultDoc = webApp.getDocument();
+		webApp.doGet(request, response);
 	}
 
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+		WebApp webApp = getWebApp(request);
+		webApp.doPost(request, response);
 	}
 
 }
