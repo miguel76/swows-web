@@ -90,6 +90,35 @@ public class WebApp implements EventManager {
 	private static final int CLIENT_COMMANDS_CACHE_CAPACITY = 256;
 	private static final String CLIENT_COMMANDS_SEP = ";";
 	
+	private int newNodeCount = 0;
+	private Map<org.w3c.dom.Node, Integer> newNodeIds;
+	
+	private void resetCommandSet() {
+		clientCommandsCache = null;
+		newNodeCount = 0;
+		newNodeIds = null;
+	}
+	
+	private String newNode2varName(org.w3c.dom.Node node) {
+		if (newNodeIds == null)
+			newNodeIds = new HashMap<org.w3c.dom.Node, Integer>();
+		Integer nodeId = newNodeIds.get(node);
+		if (nodeId == null) {
+			nodeId = newNodeCount++;
+			newNodeIds.put(node, nodeId);
+		}
+		return "newNode_" + nodeId;
+	}
+	
+	private String node2varName(org.w3c.dom.Node node) {
+		if (newNodeIds == null)
+			return null;
+		Integer nodeId = newNodeIds.get(node);
+		if (nodeId == null)
+			return null;
+		return "newNode_" + nodeId;
+	}
+	
 	// TODO: it would be possible useful to use deflate/inflate for client server communication
 	// Server-side: http://docs.oracle.com/javase/1.5.0/docs/api/java/util/zip/Deflater.html
 	// Client-side: https://github.com/dankogai/js-deflate
@@ -112,7 +141,7 @@ public class WebApp implements EventManager {
 				new EventListener() {
 					@Override
 					public void handleEvent(Event event) {
-						DOMMutationEvent domEvent = (DOMMutationEvent) event;
+						MutationEvent domEvent = (MutationEvent) event;
 						System.out.println("*** DOM Changed Event START ***");
 						System.out.println("Event type: " + domEvent.getType());
 						System.out.println("Target: " + domEvent.getTarget());
@@ -151,7 +180,7 @@ public class WebApp implements EventManager {
 //        				domGenericEventListener,
 //						false);
 //
-        ((EventTarget) xmlDoc)
+        ((EventTarget) document)
 				.addEventListener(
 						"DOMNodeInserted",
 						new EventListener() {
@@ -161,7 +190,7 @@ public class WebApp implements EventManager {
 							}
 						},
 						false);
-        ((EventTarget) xmlDoc)
+        ((EventTarget) document)
 				.addEventListener(
 						"DOMNodeRemoved",
 						new EventListener() {
@@ -171,7 +200,7 @@ public class WebApp implements EventManager {
 							}
 						},
 						false);
-        ((EventTarget) xmlDoc)
+        ((EventTarget) document)
 				.addEventListener(
 						"DOMNodeRemovedFromDocument",
 						new EventListener() {
@@ -181,7 +210,7 @@ public class WebApp implements EventManager {
 							}
 						},
 						false);
-        ((EventTarget) xmlDoc)
+        ((EventTarget) document)
 				.addEventListener(
 						"DOMNodeInsertedIntoDocument",
 						new EventListener() {
@@ -343,14 +372,32 @@ public class WebApp implements EventManager {
 		
 	}
 	
-	private String clientElementIdentifier(Element element) {
-		NamedNodeMap attrs = element.getAttributes();
-		for (int attrIndex = 0; attrIndex < attrs.getLength(); attrIndex++ ) {
-			Attr attr = (Attr) attrs.item(attrIndex);
-			if (attr.isId() 
-					|| attr.getName().equalsIgnoreCase("id") // TODO: delete this two lines of workaround and find better way to manage id attrs
-					|| attr.getName().equals("xml:id") )
-				return "document.getElementById('" + attr.getValue() + "')";
+//	private String clientElementIdentifier(Element element) {
+//		NamedNodeMap attrs = element.getAttributes();
+//		for (int attrIndex = 0; attrIndex < attrs.getLength(); attrIndex++ ) {
+//			Attr attr = (Attr) attrs.item(attrIndex);
+//			if (attr.isId() 
+//					|| attr.getName().equalsIgnoreCase("id") // TODO: delete this two lines of workaround and find better way to manage id attrs
+//					|| attr.getName().equals("xml:id") )
+//				return "document.getElementById('" + attr.getValue() + "')";
+//		}
+//		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
+//	}
+	
+	private String clientNodeIdentifier(org.w3c.dom.Node node) {
+		String varName = node2varName(node);
+		if (varName != null)
+			return varName;
+		if (node instanceof Element) {
+			Element element = (Element) node;
+			NamedNodeMap attrs = element.getAttributes();
+			for (int attrIndex = 0; attrIndex < attrs.getLength(); attrIndex++ ) {
+				Attr attr = (Attr) attrs.item(attrIndex);
+				if (attr.isId() 
+						|| attr.getName().equalsIgnoreCase("id") // TODO: delete this two lines of workaround and find better way to manage id attrs
+						|| attr.getName().equals("xml:id") )
+					return "document.getElementById('" + attr.getValue() + "')";
+			}
 		}
 		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
 	}
@@ -362,7 +409,7 @@ public class WebApp implements EventManager {
 			String type,
 			boolean useCapture) {
 		if (target instanceof Element) {
-			return clientElementIdentifier((Element) target)
+			return clientNodeIdentifier(target)
 								+ ".addEventListener( '"
 								+ type + "', "
 								+ JS_CALLBACK_FUNCTION_NAME + ", "
@@ -397,68 +444,72 @@ public class WebApp implements EventManager {
 	}
 
 	private void addAttrModify(MutationEvent event) {
-		String elemId = clientElementIdentifier((Element) target);
-		String attrNsURI = event.getRelatedNode().getNamespaceURI();
-		String cmd;
+		String elemId = clientNodeIdentifier((org.w3c.dom.Node) event.getTarget());
+		String nsURI = event.getRelatedNode().getNamespaceURI();
+		String cmd = null;
 		switch(event.getAttrChange()) {
 			case MutationEvent.ADDITION :
 			case MutationEvent.MODIFICATION :
-				if (attrNsURI != null)
+				if (nsURI != null)
 					cmd = elemId + "setAttributeNS(" + nsURI + "," + event.getAttrName() + "," + event.getNewValue() + ")";
 				else
 					cmd = elemId + "setAttribute(" + event.getAttrName() + "," + event.getNewValue() + ")";
 				break;
 			case MutationEvent.REMOVAL :
-				if (attrNsURI != null)
+				if (nsURI != null)
 					cmd = elemId + "removeAttributeNS(" + nsURI + "," + event.getAttrName() + ")";
 				else
 					cmd = elemId + "removeAttribute(" + event.getAttrName() + ")";
 				break;
 		}
-		if (docLoadedOnClient)
+		if (cmd != null && docLoadedOnClient)
 			addClientCommand( cmd );
 	}
 
 	private void addNodeCreation(MutationEvent event) {
-		/*
-		Node newNode = event.getTarget();
+		org.w3c.dom.Node newNode = (org.w3c.dom.Node) event.getTarget();
 		String nsURI = newNode.getNamespaceURI();
-		String cmd;
+		String cmd = null;
 		switch(newNode.getNodeType()) {
-			case(Node.ATTRIBUTE_NODE) :
+			case(org.w3c.dom.Node.ATTRIBUTE_NODE) :
 				if (nsURI != null)
-					cmd = "document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
 				else
-					cmd = "document.createAttribute(" + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createAttribute(" + newNode.getNodeName() + ")";
 				break;
-			case(Node.ELEMENT_NODE) :
+			case(org.w3c.dom.Node.ELEMENT_NODE) :
 				if (nsURI != null)
-					cmd = "document.createElementNS(" + nsURI + "," + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createElementNS(" + nsURI + "," + newNode.getNodeName() + ")";
 				else
-					cmd = "document.createElement(" + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createElement(" + newNode.getNodeName() + ")";
 				break;
-			case(Node.TEXT_NODE) :
-				cmd = "document.createText(" + newNode.getNodeValue() + ")";
+			case(org.w3c.dom.Node.TEXT_NODE) :
+				cmd = "var " + newNode2varName(newNode) + " = document.createText(" + newNode.getNodeValue() + ")";
 				break;
-			case(Node.DOCUMENT_FRAGMENT_NODE) :
+			case(org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE) :
+				cmd = "var " + newNode2varName(newNode) + " = document.createDocumentFragment()";
 				break;
-			case(Node.COMMENT_NODE) :
-				if (nsURI != null)
-					cmd = "document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
-				else
-					cmd = "document.createAttribute(" + newNode.getNodeName() + ")";
+			case(org.w3c.dom.Node.COMMENT_NODE) :
+				cmd = "var " + newNode2varName(newNode) + " = document.createComment(" + newNode.getNodeValue() + ")";
 				break;
 		}
-		*/
+		if (cmd != null && docLoadedOnClient)
+			addClientCommand( cmd );
 	}
 
 	private void addNodeRemovalFromDoc(MutationEvent event) {
 	}
 
 	private void addNodeInsert(MutationEvent event) {
+		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
+		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
+		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + clientNodeIdentifier(childNode) + ")");
 	}
 
 	private void addNodeRemoval(MutationEvent event) {
+		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
+		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
+		addClientCommand(clientNodeIdentifier(parentNode) + ".removeChild(" + clientNodeIdentifier(childNode) + ")");
 	}
 
 	@Override
@@ -471,16 +522,16 @@ public class WebApp implements EventManager {
 			if (listenedTypesForTarget.isEmpty())
 				listenedNodeAndTypes.remove(target);
 		}
-		if (target instanceof Element) {
+//		if (target instanceof Element) {
 //			((Element) target).removeAttribute("on" + type);
 			if (docLoadedOnClient)
 				addClientCommand(
-						clientElementIdentifier((Element) target)
+						clientNodeIdentifier(target)
 								+ ".removeEventListener( '"
 								+ type + "', "
 								+ JS_CALLBACK_FUNCTION_NAME + ", "
 								+ useCapture + " )");
-		}
+//		}
 	}
 	
 	private void sendEntireDocument(HttpServletResponse response) throws IOException {
@@ -518,7 +569,7 @@ public class WebApp implements EventManager {
 	    
 	    if (clientCommandsCache != null) {
 	    	writer.write(clientCommandsCache.toString());
-	    	clientCommandsCache = null;
+	    	resetCommandSet();
 		    writer.flush();
 	    }	    
 	    // copying input to output just to test it
