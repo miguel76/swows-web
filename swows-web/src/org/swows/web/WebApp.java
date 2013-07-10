@@ -151,31 +151,46 @@ public class WebApp implements EventManager {
 //        				domGenericEventListener,
 //						false);
 //
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMNodeInserted",
-//						domEventListener,
-//						false);
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMNodeRemoved",
-//						domEventListener,
-//						false);
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMNodeRemovedFromDocument",
-//						domEventListener,
-//						false);
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMNodeInsertedIntoDocument",
-//						domEventListener,
-//						false);
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMNodeInserted",
-//						domEventListener,
-//						false);
+        ((EventTarget) xmlDoc)
+				.addEventListener(
+						"DOMNodeInserted",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								addNodeInsert((MutationEvent) event);
+							}
+						},
+						false);
+        ((EventTarget) xmlDoc)
+				.addEventListener(
+						"DOMNodeRemoved",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								addNodeRemoval((MutationEvent) event);
+							}
+						},
+						false);
+        ((EventTarget) xmlDoc)
+				.addEventListener(
+						"DOMNodeRemovedFromDocument",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								addNodeRemovalFromDoc((MutationEvent) event);
+							}
+						},
+						false);
+        ((EventTarget) xmlDoc)
+				.addEventListener(
+						"DOMNodeInsertedIntoDocument",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								addNodeCreation((MutationEvent) event);
+							}
+						},
+						false);
 				
         ((EventTarget) document)
 				.addEventListener(
@@ -183,13 +198,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
-								MutationEvent domEvent = (MutationEvent) event;
-//								() domEvent.getTarget();
-								System.out.println("Attr Name: " + domEvent.getAttrName());
-								System.out.println("Attr Change Type: " + domEvent.getAttrChange());
-								System.out.println("Attr New Value: " + domEvent.getNewValue());
-								System.out.println("Attr Prev Value: " + domEvent.getPrevValue());
-								
+								addAttrModify((MutationEvent) event);
 							}
 						},
 						false);
@@ -387,8 +396,7 @@ public class WebApp implements EventManager {
 			addClientCommand( genAddEventListener(target, type, useCapture) );
 	}
 
-	@Override
-	public void addAttrModify(MutationEvent event) {
+	private void addAttrModify(MutationEvent event) {
 		String elemId = clientElementIdentifier((Element) target);
 		String attrNsURI = event.getRelatedNode().getNamespaceURI();
 		String cmd;
@@ -396,19 +404,61 @@ public class WebApp implements EventManager {
 			case MutationEvent.ADDITION :
 			case MutationEvent.MODIFICATION :
 				if (attrNsURI != null)
-					cmd = elemId + "setAttributeNS(" + event.attrNsURI() + "," + event.getAttrName() + "," + event.getNewValue() + ")";
+					cmd = elemId + "setAttributeNS(" + nsURI + "," + event.getAttrName() + "," + event.getNewValue() + ")";
 				else
 					cmd = elemId + "setAttribute(" + event.getAttrName() + "," + event.getNewValue() + ")";
 				break;
 			case MutationEvent.REMOVAL :
 				if (attrNsURI != null)
-					cmd = elemId + "removeAttributeNS(" + event.attrNsURI() + "," + event.getAttrName() + ")";
+					cmd = elemId + "removeAttributeNS(" + nsURI + "," + event.getAttrName() + ")";
 				else
 					cmd = elemId + "removeAttribute(" + event.getAttrName() + ")";
 				break;
 		}
 		if (docLoadedOnClient)
 			addClientCommand( cmd );
+	}
+
+	private void addNodeCreation(MutationEvent event) {
+		/*
+		Node newNode = event.getTarget();
+		String nsURI = newNode.getNamespaceURI();
+		String cmd;
+		switch(newNode.getNodeType()) {
+			case(Node.ATTRIBUTE_NODE) :
+				if (nsURI != null)
+					cmd = "document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
+				else
+					cmd = "document.createAttribute(" + newNode.getNodeName() + ")";
+				break;
+			case(Node.ELEMENT_NODE) :
+				if (nsURI != null)
+					cmd = "document.createElementNS(" + nsURI + "," + newNode.getNodeName() + ")";
+				else
+					cmd = "document.createElement(" + newNode.getNodeName() + ")";
+				break;
+			case(Node.TEXT_NODE) :
+				cmd = "document.createText(" + newNode.getNodeValue() + ")";
+				break;
+			case(Node.DOCUMENT_FRAGMENT_NODE) :
+				break;
+			case(Node.COMMENT_NODE) :
+				if (nsURI != null)
+					cmd = "document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
+				else
+					cmd = "document.createAttribute(" + newNode.getNodeName() + ")";
+				break;
+		}
+		*/
+	}
+
+	private void addNodeRemovalFromDoc(MutationEvent event) {
+	}
+
+	private void addNodeInsert(MutationEvent event) {
+	}
+
+	private void addNodeRemoval(MutationEvent event) {
 	}
 
 	@Override
