@@ -22,16 +22,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.batik.dom.events.DOMMutationEvent;
-import org.apache.batik.dom.svg.SVGDOMImplementation;
-import org.apache.batik.swing.JSVGCanvas;
-import org.apache.batik.swing.gvt.GVTTreeRendererAdapter;
-import org.apache.batik.swing.gvt.GVTTreeRendererEvent;
-import org.apache.batik.swing.svg.GVTTreeBuilderAdapter;
-import org.apache.batik.swing.svg.GVTTreeBuilderEvent;
-import org.apache.batik.swing.svg.SVGDocumentLoaderAdapter;
-import org.apache.batik.swing.svg.SVGDocumentLoaderEvent;
-import org.apache.batik.util.RunnableQueue;
 import org.swows.graph.DynamicDatasetMap;
 import org.swows.graph.EventCachingGraph;
 import org.swows.graph.events.DynamicGraph;
@@ -56,6 +46,7 @@ import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
+import org.w3c.dom.events.MutationEvent;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
@@ -117,8 +108,7 @@ public class WebApp implements EventManager {
 	private void addDOMListeners() {
 		
 		//TODO: quite everything to be done here
-		
-        EventListener domEventListener =
+		EventListener domEventListener =
 				new EventListener() {
 					@Override
 					public void handleEvent(Event event) {
@@ -193,7 +183,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
-								DOMMutationEvent domEvent = (DOMMutationEvent) event;
+								MutationEvent domEvent = (MutationEvent) event;
 //								() domEvent.getTarget();
 								System.out.println("Attr Name: " + domEvent.getAttrName());
 								System.out.println("Attr Change Type: " + domEvent.getAttrChange());
@@ -395,6 +385,30 @@ public class WebApp implements EventManager {
 		listenedTypesForTarget.add(type);
 		if (docLoadedOnClient)
 			addClientCommand( genAddEventListener(target, type, useCapture) );
+	}
+
+	@Override
+	public void addAttrModify(MutationEvent event) {
+		String elemId = clientElementIdentifier((Element) target);
+		String attrNsURI = event.getRelatedNode().getNamespaceURI();
+		String cmd;
+		switch(event.getAttrChange()) {
+			case MutationEvent.ADDITION :
+			case MutationEvent.MODIFICATION :
+				if (attrNsURI != null)
+					cmd = elemId + "setAttributeNS(" + event.attrNsURI() + "," + event.getAttrName() + "," + event.getNewValue() + ")";
+				else
+					cmd = elemId + "setAttribute(" + event.getAttrName() + "," + event.getNewValue() + ")";
+				break;
+			case MutationEvent.REMOVAL :
+				if (attrNsURI != null)
+					cmd = elemId + "removeAttributeNS(" + event.attrNsURI() + "," + event.getAttrName() + ")";
+				else
+					cmd = elemId + "removeAttribute(" + event.getAttrName() + ")";
+				break;
+		}
+		if (docLoadedOnClient)
+			addClientCommand( cmd );
 	}
 
 	@Override
