@@ -43,6 +43,7 @@ import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
@@ -83,7 +84,8 @@ public class WebApp implements EventManager {
 					"evt:type \"' + evt.type + '\".'; " +
 			"var req = new XMLHttpRequest(); req.open('POST','',false); " +
 			"req.send(reqTxt); " +
-			"alert(req.responseText); "; // TODO:will be eval instead of alert
+//			"alert(req.responseText); " +
+			"eval(req.responseText); "; 
 	private static final String JS_TARGET_CB_FUNCTION = "var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t }; ";
 	private static final String CHARACTER_ENCODING = "UTF-8";
 	private static final String JS_CONTENT_TYPE = "application/javascript";
@@ -424,8 +426,12 @@ public class WebApp implements EventManager {
 			}
 		}
 		org.w3c.dom.Node parent = node.getParentNode();
-//		return clientNodeIdentifier(parent) + ".children[" + parent.getChildNodes().;
-		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
+		if (parent instanceof Document)
+			return "document.documentElement";
+		int childIndex = 0;
+		for (org.w3c.dom.Node currNode = node; currNode != parent.getFirstChild(); currNode = currNode.getPreviousSibling())
+			childIndex++;
+		return clientNodeIdentifier(parent) + ".childNodes[" + childIndex + "]";
 	}
 	
 	Map<org.w3c.dom.Node, Set<String>> listenedNodeAndTypes = new HashMap<org.w3c.dom.Node, Set<String>>();
@@ -479,21 +485,21 @@ public class WebApp implements EventManager {
 			case MutationEvent.ADDITION :
 			case MutationEvent.MODIFICATION :
 				if (nsURI != null)
-					cmd = elemId + "setAttributeNS('" + nsURI + "','" + event.getAttrName() + "','" + event.getNewValue() + "')";
+					cmd = elemId + ".setAttributeNS('" + nsURI + "','" + event.getAttrName() + "','" + event.getNewValue() + "')";
 				else
-					cmd = elemId + "setAttribute('" + event.getAttrName() + "','" + event.getNewValue() + "')";
+					cmd = elemId + ".setAttribute('" + event.getAttrName() + "','" + event.getNewValue() + "')";
 				break;
 			case MutationEvent.REMOVAL :
 				if (nsURI != null)
-					cmd = elemId + "removeAttributeNS('" + nsURI + "','" + event.getAttrName() + "')";
+					cmd = elemId + ".removeAttributeNS('" + nsURI + "','" + event.getAttrName() + "')";
 				else
-					cmd = elemId + "removeAttribute('" + event.getAttrName() + "')";
+					cmd = elemId + ".removeAttribute('" + event.getAttrName() + "')";
 				break;
 		}
 		if (cmd != null)
 			addClientCommand( cmd );
 	}
-
+	
 	private void addNodeCreation(MutationEvent event) {
 		if (!docLoadedOnClient)
 			return;
@@ -527,6 +533,54 @@ public class WebApp implements EventManager {
 			addClientCommand( cmd );
 	}
 
+	private String addCompleteNodeCreation(org.w3c.dom.Node newNode) {
+		String varName = node2varName(newNode);
+		if (varName != null)
+			return varName;
+		String nsURI = newNode.getNamespaceURI();
+		String cmd = null;
+		varName = newNode2varName(newNode);
+		switch(newNode.getNodeType()) {
+			case(org.w3c.dom.Node.ATTRIBUTE_NODE) :
+				if (nsURI != null)
+					cmd = "var " + varName + " = document.createAttributeNS('" + nsURI + "','" + newNode.getNodeName() + "')";
+				else
+					cmd = "var " + varName + " = document.createAttribute('" + newNode.getNodeName() + "')";
+				break;
+			case(org.w3c.dom.Node.ELEMENT_NODE) :
+				if (nsURI != null)
+					cmd = "var " + varName + " = document.createElementNS('" + nsURI + "','" + newNode.getNodeName() + "')";
+				else
+					cmd = "var " + varName + " = document.createElement('" + newNode.getNodeName() + "')";
+				NamedNodeMap attrMap = newNode.getAttributes();
+				for (int attrIndex = 0; attrIndex < attrMap.getLength(); attrIndex++) {
+					Attr attr = (Attr) attrMap.item(attrIndex);
+					String attrNsURI = attr.getNamespaceURI();
+					if (attrNsURI != null)
+						cmd += "; " + varName + ".setAttributeNS('" + attrNsURI + "','" + attr.getName() + "','" + attr.getValue() + "')";
+					else
+						cmd += "; " + varName + ".setAttribute('" + attr.getName() + "','" + attr.getValue() + "')";
+				}
+//				NodeList children = newNode.getChildNodes();
+//				for (int childIndex = 0; childIndex < children.getLength(); childIndex++) {
+//					
+//				}
+				break;
+			case(org.w3c.dom.Node.TEXT_NODE) :
+				cmd = "var " + varName + " = document.createText('" + newNode.getNodeValue() + "')";
+				break;
+			case(org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE) :
+				cmd = "var " + varName + " = document.createDocumentFragment()";
+				break;
+			case(org.w3c.dom.Node.COMMENT_NODE) :
+				cmd = "var " + varName + " = document.createComment('" + newNode.getNodeValue() + "')";
+				break;
+		}
+		if (cmd != null)
+			addClientCommand( cmd );
+		return varName;
+	}
+
 	private void addNodeRemovalFromDoc(MutationEvent event) {
 	}
 
@@ -535,7 +589,8 @@ public class WebApp implements EventManager {
 			return;
 		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
-		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + clientNodeIdentifier(childNode) + ")");
+//		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + clientNodeIdentifier(childNode) + ")");
+		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + addCompleteNodeCreation(childNode) + ")");
 	}
 
 	private void addNodeRemoval(MutationEvent event) {

@@ -36,14 +36,14 @@ import com.hp.hpl.jena.query.DatasetFactory;
  * Servlet implementation class InitialContentServlet
  */
 @WebServlet("/InitialContentServlet")
-public class InitialContentServlet extends HttpServlet {
+public class Play extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private WebApp webApp = null;
 
     /**
      * Default constructor. 
      */
-    public InitialContentServlet() {
+    public Play() {
         // TODO Auto-generated constructor stub
     }
     
