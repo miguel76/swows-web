@@ -22,6 +22,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.swows.graph.DynamicDatasetMap;
 import org.swows.graph.EventCachingGraph;
 import org.swows.graph.events.DynamicGraph;
@@ -64,6 +65,7 @@ public class WebApp implements EventManager {
 //	private boolean docToBeRealoaded = false;
 	private DOMImplementation domImpl;
 	private final WebInput webInput = new WebInput();
+	private static final Logger logger = Logger.getLogger(WebApp.class);
 	
 	private static final String JS_CALLBACK_FUNCTION_NAME = "swowsEvent";
 	private static final String JS_CALLBACK = JS_CALLBACK_FUNCTION_NAME + "()";
@@ -136,43 +138,44 @@ public class WebApp implements EventManager {
 	
 	private void addDOMListeners() {
 		
-		//TODO: quite everything to be done here
-		EventListener domEventListener =
-				new EventListener() {
-					@Override
-					public void handleEvent(Event event) {
-						MutationEvent domEvent = (MutationEvent) event;
-						System.out.println("*** DOM Changed Event START ***");
-						System.out.println("Event type: " + domEvent.getType());
-						System.out.println("Target: " + domEvent.getTarget());
-						System.out.println("Attr Name: " + domEvent.getAttrName());
-						System.out.println("Attr Change Type: " + domEvent.getAttrChange());
-						System.out.println("Attr New Value: " + domEvent.getNewValue());
-						System.out.println("Attr Prev Value: " + domEvent.getPrevValue());
-						System.out.println("Related Node: " + domEvent.getRelatedNode());
-						System.out.println("*** DOM Changed Event END ***");
-					}
-				};
+		logger.debug("Started registering DOM mutation listeners");
+
+		//		EventListener domEventListener =
+//				new EventListener() {
+//					@Override
+//					public void handleEvent(Event event) {
+//						MutationEvent domEvent = (MutationEvent) event;
+//						System.out.println("*** DOM Changed Event START ***");
+//						System.out.println("Event type: " + domEvent.getType());
+//						System.out.println("Target: " + domEvent.getTarget());
+//						System.out.println("Attr Name: " + domEvent.getAttrName());
+//						System.out.println("Attr Change Type: " + domEvent.getAttrChange());
+//						System.out.println("Attr New Value: " + domEvent.getNewValue());
+//						System.out.println("Attr Prev Value: " + domEvent.getPrevValue());
+//						System.out.println("Related Node: " + domEvent.getRelatedNode());
+//						System.out.println("*** DOM Changed Event END ***");
+//					}
+//				};
 				
-		EventListener domGenericEventListener =
-				new EventListener() {
-					@Override
-					public void handleEvent(Event event) {
-				      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
-				        		"3.0");
-				        LSSerializer serializer = feature.createLSSerializer();
-				        LSOutput output = feature.createLSOutput();
-				        OutputStream os;
-						try {
-							os = new FileOutputStream("/home/miguel/tmp/Result.svg");
-						} catch (FileNotFoundException e) {
-							e.printStackTrace();
-							throw new RuntimeException(e);
-						}
-				        output.setByteStream(os);
-				        serializer.write(document, output);
-					}
-				};
+//		EventListener domGenericEventListener =
+//				new EventListener() {
+//					@Override
+//					public void handleEvent(Event event) {
+//				      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
+//				        		"3.0");
+//				        LSSerializer serializer = feature.createLSSerializer();
+//				        LSOutput output = feature.createLSOutput();
+//				        OutputStream os;
+//						try {
+//							os = new FileOutputStream("/home/miguel/tmp/Result.svg");
+//						} catch (FileNotFoundException e) {
+//							e.printStackTrace();
+//							throw new RuntimeException(e);
+//						}
+//				        output.setByteStream(os);
+//				        serializer.write(document, output);
+//					}
+//				};
 						
 //        ((EventTarget) xmlDoc)
 //        		.addEventListener(
@@ -186,6 +189,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
+								logger.debug("DOMNodeInserted event");
 								addNodeInsert((MutationEvent) event);
 							}
 						},
@@ -196,6 +200,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
+								logger.debug("DOMNodeRemoved event");
 								addNodeRemoval((MutationEvent) event);
 							}
 						},
@@ -206,6 +211,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
+								logger.debug("DOMNodeRemovedFromDocument event");
 								addNodeRemovalFromDoc((MutationEvent) event);
 							}
 						},
@@ -216,6 +222,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
+								logger.debug("DOMNodeInsertedIntoDocument event");
 								addNodeCreation((MutationEvent) event);
 							}
 						},
@@ -227,6 +234,7 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
+//								logger.debug("DOMAttrModified event of type " + ((MutationEvent) event).getAttrChange());
 								addAttrModify((MutationEvent) event);
 							}
 						},
@@ -237,6 +245,7 @@ public class WebApp implements EventManager {
 //						domEventListener,
 //						false);
 
+		logger.debug("Ended registering DOM mutation listeners");
 		
 	}
 	
@@ -255,7 +264,7 @@ public class WebApp implements EventManager {
 			@Override
 			public synchronized void run(final Runnable runnable) {
 //				try {
-					while (!docLoadedOnClient || cachingGraph == null) Thread.yield();
+//					while (!docLoadedOnClient || cachingGraph == null) Thread.yield();
 //					final long start = System.currentTimeMillis();
 					runnable.run();
 //							long afterCascade = System.currentTimeMillis();
@@ -290,7 +299,22 @@ public class WebApp implements EventManager {
 //		cachingGraph = new EventCachingGraph( new LoggingGraph(outputGraph, Logger.getRootLogger(), true, true) );
         
 		try {
-			domImpl = DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0");
+			domImpl =
+					(DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0 +MutationEvents 2.0") != null)
+					? DOMImplementationRegistry.newInstance().getDOMImplementation("XML 3.0 +MutationEvents 2.0") : domImpl;
+			logger.debug("Loaded DOM implementation: " + domImpl);
+//			logger.debug("XML DOM Level 1: " + domImpl.hasFeature("XML", "1.0"));
+//			logger.debug("XML DOM Level 2: " + domImpl.hasFeature("XML", "2.0"));
+//			logger.debug("XML DOM Level 3: " + domImpl.hasFeature("XML", "3.0"));
+//			logger.debug("Core DOM Level 1: " + domImpl.hasFeature("Core", "1.0"));
+//			logger.debug("Core DOM Level 2: " + domImpl.hasFeature("Core", "2.0"));
+//			logger.debug("Core DOM Level 3: " + domImpl.hasFeature("Core", "3.0"));
+//			logger.debug("Events DOM Level 1: " + domImpl.hasFeature("+Events", "1.0"));
+//			logger.debug("Events DOM Level 2: " + domImpl.hasFeature("+Events", "2.0"));
+//			logger.debug("Events DOM Level 3: " + domImpl.hasFeature("+Events", "3.0"));
+//			logger.debug("MutationEvents DOM Level 1: " + domImpl.hasFeature("+MutationEvents", "1.0"));
+//			logger.debug("MutationEvents DOM Level 2: " + domImpl.hasFeature("+MutationEvents", "2.0"));
+//			logger.debug("MutationEvents DOM Level 3: " + domImpl.hasFeature("+MutationEvents", "3.0"));
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (InstantiationException e) {
@@ -399,6 +423,8 @@ public class WebApp implements EventManager {
 					return "document.getElementById('" + attr.getValue() + "')";
 			}
 		}
+		org.w3c.dom.Node parent = node.getParentNode();
+//		return clientNodeIdentifier(parent) + ".children[" + parent.getChildNodes().;
 		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
 	}
 	
@@ -444,6 +470,8 @@ public class WebApp implements EventManager {
 	}
 
 	private void addAttrModify(MutationEvent event) {
+		if (!docLoadedOnClient)
+			return;
 		String elemId = clientNodeIdentifier((org.w3c.dom.Node) event.getTarget());
 		String nsURI = event.getRelatedNode().getNamespaceURI();
 		String cmd = null;
@@ -451,49 +479,51 @@ public class WebApp implements EventManager {
 			case MutationEvent.ADDITION :
 			case MutationEvent.MODIFICATION :
 				if (nsURI != null)
-					cmd = elemId + "setAttributeNS(" + nsURI + "," + event.getAttrName() + "," + event.getNewValue() + ")";
+					cmd = elemId + "setAttributeNS('" + nsURI + "','" + event.getAttrName() + "','" + event.getNewValue() + "')";
 				else
-					cmd = elemId + "setAttribute(" + event.getAttrName() + "," + event.getNewValue() + ")";
+					cmd = elemId + "setAttribute('" + event.getAttrName() + "','" + event.getNewValue() + "')";
 				break;
 			case MutationEvent.REMOVAL :
 				if (nsURI != null)
-					cmd = elemId + "removeAttributeNS(" + nsURI + "," + event.getAttrName() + ")";
+					cmd = elemId + "removeAttributeNS('" + nsURI + "','" + event.getAttrName() + "')";
 				else
-					cmd = elemId + "removeAttribute(" + event.getAttrName() + ")";
+					cmd = elemId + "removeAttribute('" + event.getAttrName() + "')";
 				break;
 		}
-		if (cmd != null && docLoadedOnClient)
+		if (cmd != null)
 			addClientCommand( cmd );
 	}
 
 	private void addNodeCreation(MutationEvent event) {
+		if (!docLoadedOnClient)
+			return;
 		org.w3c.dom.Node newNode = (org.w3c.dom.Node) event.getTarget();
 		String nsURI = newNode.getNamespaceURI();
 		String cmd = null;
 		switch(newNode.getNodeType()) {
 			case(org.w3c.dom.Node.ATTRIBUTE_NODE) :
 				if (nsURI != null)
-					cmd = "var " + newNode2varName(newNode) + " = document.createAttributeNS(" + nsURI + "," + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createAttributeNS('" + nsURI + "','" + newNode.getNodeName() + "')";
 				else
-					cmd = "var " + newNode2varName(newNode) + " = document.createAttribute(" + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createAttribute('" + newNode.getNodeName() + "')";
 				break;
 			case(org.w3c.dom.Node.ELEMENT_NODE) :
 				if (nsURI != null)
-					cmd = "var " + newNode2varName(newNode) + " = document.createElementNS(" + nsURI + "," + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createElementNS('" + nsURI + "','" + newNode.getNodeName() + "')";
 				else
-					cmd = "var " + newNode2varName(newNode) + " = document.createElement(" + newNode.getNodeName() + ")";
+					cmd = "var " + newNode2varName(newNode) + " = document.createElement('" + newNode.getNodeName() + "')";
 				break;
 			case(org.w3c.dom.Node.TEXT_NODE) :
-				cmd = "var " + newNode2varName(newNode) + " = document.createText(" + newNode.getNodeValue() + ")";
+				cmd = "var " + newNode2varName(newNode) + " = document.createText('" + newNode.getNodeValue() + "')";
 				break;
 			case(org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE) :
 				cmd = "var " + newNode2varName(newNode) + " = document.createDocumentFragment()";
 				break;
 			case(org.w3c.dom.Node.COMMENT_NODE) :
-				cmd = "var " + newNode2varName(newNode) + " = document.createComment(" + newNode.getNodeValue() + ")";
+				cmd = "var " + newNode2varName(newNode) + " = document.createComment('" + newNode.getNodeValue() + "')";
 				break;
 		}
-		if (cmd != null && docLoadedOnClient)
+		if (cmd != null)
 			addClientCommand( cmd );
 	}
 
@@ -501,12 +531,16 @@ public class WebApp implements EventManager {
 	}
 
 	private void addNodeInsert(MutationEvent event) {
+		if (!docLoadedOnClient)
+			return;
 		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
 		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + clientNodeIdentifier(childNode) + ")");
 	}
 
 	private void addNodeRemoval(MutationEvent event) {
+		if (!docLoadedOnClient)
+			return;
 		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
 		addClientCommand(clientNodeIdentifier(parentNode) + ".removeChild(" + clientNodeIdentifier(childNode) + ")");
@@ -544,6 +578,7 @@ public class WebApp implements EventManager {
         LSOutput output = feature.createLSOutput();
         output.setByteStream(out);
         serializer.write(document, output);
+        docLoadedOnClient = true;
 	}
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

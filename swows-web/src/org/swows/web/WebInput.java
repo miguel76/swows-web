@@ -234,10 +234,10 @@ public class WebInput implements DomEventListener {
 				new StringReader(eventString),
 				DEFAULT_BASE);
 		logger.debug("Launching update thread... ");
-		LocalTimer.get().schedule(
-				new TimerTask() {
-					@Override
-					public void run() {
+//		LocalTimer.get().schedule(
+//				new TimerTask() {
+//					@Override
+//					public void run() {
 						RunnableContextFactory.getDefaultRunnableContext().run(
 								new Runnable() {
 									@Override
@@ -247,9 +247,9 @@ public class WebInput implements DomEventListener {
 										logger.debug("Update events sent!");
 									}
 								} );
-					}
-				}, 0 );
-		logger.debug("Update thread launched!");
+//					}
+//				}, 0 );
+//		logger.debug("Update thread launched!");
 	}
 	
 	@Override
