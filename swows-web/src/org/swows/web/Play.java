@@ -35,7 +35,7 @@ import com.hp.hpl.jena.query.DatasetFactory;
 /**
  * Servlet implementation class InitialContentServlet
  */
-@WebServlet("/InitialContentServlet")
+@WebServlet("/play")
 public class Play extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private WebApp webApp = null;
@@ -50,6 +50,7 @@ public class Play extends HttpServlet {
     private WebApp getWebApp(HttpServletRequest request) {
     	if (webApp == null) {
     		String dfUri = request.getParameter("dataflow");
+    		if (dfUri == null) dfUri = request.getParameter("df");
 //    		Document resultDoc = MouseApp.createContent(domImpl, dfUri);
     		Dataset dfDataset = DatasetFactory.create(dfUri, SmartFileManager.get());
     		final Graph dfGraph = dfDataset.asDatasetGraph().getDefaultGraph();
