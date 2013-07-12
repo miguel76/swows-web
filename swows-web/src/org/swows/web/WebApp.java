@@ -55,21 +55,22 @@ public class WebApp implements EventManager {
 	private static final Logger logger = Logger.getLogger(WebApp.class);
 	
 	private static final String JS_CALLBACK_FUNCTION_NAME = "swowsEvent";
-	private static final String JS_CALLBACK_BODY =
-			"var reqTxt = '" +
-					"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
-					"_:newEvent a evt:Event; '; " +
-//			"for (var i = 0; i < evt.length; i++) { " +
-//				"reqText += '<' + evt[i] + '>'; " +
-//			"} " +
-			"reqTxt += '" +
-					"evt:target <' + tn(evt.target).getAttribute('resource') + '>; " +
-					"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '>; " +
-					"evt:type \"' + evt.type + '\".'; " +
-			"var req = new XMLHttpRequest(); req.open('POST','',false); " +
-			"req.send(reqTxt); " +
-//			"alert(req.responseText); " +
-			"eval(req.responseText); "; 
+//	private static final String JS_CALLBACK_BODY =
+//			"var reqTxt = '" +
+//					"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
+//					"_:newEvent a evt:Event; '; " +
+////			"for (var i = 0; i < evt.length; i++) { " +
+////				"reqText += '<' + evt[i] + '>'; " +
+////			"} " +
+//			"reqTxt += '" +
+//					"evt:target <' + tn(evt.target).getAttribute('resource') + '>; " +
+//					"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '>; " +
+//					"evt:type \"' + evt.type + '\".'; " +
+//			"var req = new XMLHttpRequest(); req.open('POST','',false); " +
+//			"req.send(reqTxt); " +
+////			"alert(req.responseText); " +
+//			"eval(req.responseText); "; 
+	private String jsCallbackBody; 
 	private static final String JS_TARGET_CB_FUNCTION = "var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t }; ";
 	private static final String CHARACTER_ENCODING = "UTF-8";
 	private static final String JS_CONTENT_TYPE = "application/javascript";
@@ -202,13 +203,27 @@ public class WebApp implements EventManager {
 		document = newDocument;
 		document.getDocumentElement().setAttribute(
 				"onload",
-				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + JS_CALLBACK_BODY +" }; " + genAddEventListeners() + " alert('loaded');");
+				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() + " alert('loaded');");
 		addDOMListeners();
 	}
 
 	public WebApp(
-			Graph dataflowGraph
+			Graph dataflowGraph,
+			String requestURL
 			) {
+		
+		jsCallbackBody =
+				"var reqTxt = '" +
+						"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
+						"_:newEvent a evt:Event; '; " +
+				"reqTxt += '" +
+						"evt:target <' + tn(evt.target).getAttribute('resource') + '>; " +
+						"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '>; " +
+						"evt:type \"' + evt.type + '\".'; " +
+				"var req = new XMLHttpRequest(); req.open('" + requestURL + "','',false); " +
+				"req.send(reqTxt); " +
+				"eval(req.responseText); "; 
+		
 		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
 			@Override
 			public synchronized void run(final Runnable runnable) {
