@@ -42,6 +42,7 @@ import org.w3c.dom.ls.LSSerializer;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.NodeFactory;
 
 public class WebApp implements EventManager {
 
@@ -240,7 +241,7 @@ public class WebApp implements EventManager {
 //    	final WebInput webInput = new WebInput();
 //    	final SystemTime systemTime = new SystemTime();
     	final DynamicDatasetMap inputDatasetGraph = new DynamicDatasetMap(webInput.getGraph());
-    	inputDatasetGraph.addGraph(Node.createURI(SWI.getURI() + "mouseEvents"), webInput.getGraph());
+    	inputDatasetGraph.addGraph(NodeFactory.createURI(SWI.getURI() + "mouseEvents"), webInput.getGraph());
 		DataflowProducer applyOps =	new DataflowProducer(new DynamicGraphFromGraph(dataflowGraph), inputDatasetGraph);
 		DynamicGraph outputGraph = applyOps.createGraph(inputDatasetGraph);
 		cachingGraph = new EventCachingGraph(outputGraph);
