@@ -20,31 +20,21 @@
 package org.swows.web;
 
 import java.io.StringReader;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.TimerTask;
 
 import org.apache.log4j.Logger;
 import org.swows.graph.events.DynamicGraph;
 import org.swows.graph.events.DynamicGraphFromGraph;
-import org.swows.reader.RdfReaderFactory;
 import org.swows.runnable.LocalTimer;
 import org.swows.runnable.RunnableContextFactory;
-import org.swows.util.GraphUtils;
 import org.swows.vocabulary.DOMEvents;
 import org.swows.xmlinrdf.DomEventListener;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
-import org.w3c.dom.events.MouseEvent;
 
 import com.hp.hpl.jena.graph.GraphMaker;
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.impl.SimpleGraphMaker;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -54,7 +44,6 @@ import com.hp.hpl.jena.rdf.model.ResIterator;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.RDFReaderFImpl;
-import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
 public class WebInput implements DomEventListener {

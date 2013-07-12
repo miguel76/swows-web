@@ -1,17 +1,9 @@
 package org.swows.web;
 
-import java.awt.Color;
-import java.awt.GraphicsConfiguration;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,23 +19,18 @@ import org.swows.graph.DynamicDatasetMap;
 import org.swows.graph.EventCachingGraph;
 import org.swows.graph.events.DynamicGraph;
 import org.swows.graph.events.DynamicGraphFromGraph;
-import org.swows.mouse.MouseApp;
-import org.swows.mouse.MouseInput;
 import org.swows.producer.DataflowProducer;
 import org.swows.runnable.RunnableContext;
 import org.swows.runnable.RunnableContextFactory;
-import org.swows.time.SystemTime;
 import org.swows.vocabulary.SWI;
 import org.swows.xmlinrdf.DocumentReceiver;
 import org.swows.xmlinrdf.DomDecoder2;
-import org.swows.xmlinrdf.DomEventListener;
 import org.swows.xmlinrdf.EventManager;
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
@@ -58,8 +45,6 @@ import com.hp.hpl.jena.graph.Node;
 
 public class WebApp implements EventManager {
 
-	private static final long serialVersionUID = 1L;
-//	private RunnableQueue batikRunnableQueue = null;
 	private EventCachingGraph cachingGraph = null;
 	private boolean docLoadedOnClient = false;
 	private Document document = null;
@@ -69,8 +54,6 @@ public class WebApp implements EventManager {
 	private static final Logger logger = Logger.getLogger(WebApp.class);
 	
 	private static final String JS_CALLBACK_FUNCTION_NAME = "swowsEvent";
-	private static final String JS_CALLBACK = JS_CALLBACK_FUNCTION_NAME + "()";
-//	private static final String JS_CALLBACK_BODY = "var req = new XMLHttpRequest(); req.open('POST','',false); req.send(evt);";
 	private static final String JS_CALLBACK_BODY =
 			"var reqTxt = '" +
 					"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
@@ -142,43 +125,6 @@ public class WebApp implements EventManager {
 		
 		logger.debug("Started registering DOM mutation listeners");
 
-		//		EventListener domEventListener =
-//				new EventListener() {
-//					@Override
-//					public void handleEvent(Event event) {
-//						MutationEvent domEvent = (MutationEvent) event;
-//						System.out.println("*** DOM Changed Event START ***");
-//						System.out.println("Event type: " + domEvent.getType());
-//						System.out.println("Target: " + domEvent.getTarget());
-//						System.out.println("Attr Name: " + domEvent.getAttrName());
-//						System.out.println("Attr Change Type: " + domEvent.getAttrChange());
-//						System.out.println("Attr New Value: " + domEvent.getNewValue());
-//						System.out.println("Attr Prev Value: " + domEvent.getPrevValue());
-//						System.out.println("Related Node: " + domEvent.getRelatedNode());
-//						System.out.println("*** DOM Changed Event END ***");
-//					}
-//				};
-				
-//		EventListener domGenericEventListener =
-//				new EventListener() {
-//					@Override
-//					public void handleEvent(Event event) {
-//				      	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
-//				        		"3.0");
-//				        LSSerializer serializer = feature.createLSSerializer();
-//				        LSOutput output = feature.createLSOutput();
-//				        OutputStream os;
-//						try {
-//							os = new FileOutputStream("/home/miguel/tmp/Result.svg");
-//						} catch (FileNotFoundException e) {
-//							e.printStackTrace();
-//							throw new RuntimeException(e);
-//						}
-//				        output.setByteStream(os);
-//				        serializer.write(document, output);
-//					}
-//				};
-						
 //        ((EventTarget) xmlDoc)
 //        		.addEventListener(
 //        				"DOMSubtreeModified",
@@ -260,7 +206,7 @@ public class WebApp implements EventManager {
 	}
 
 	public WebApp(
-			Graph dataflowGraph//,
+			Graph dataflowGraph
 			) {
 		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
 			@Override
