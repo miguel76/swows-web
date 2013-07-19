@@ -203,7 +203,7 @@ public class WebApp implements EventManager {
 		document = newDocument;
 		document.getDocumentElement().setAttribute(
 				"onload",
-				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() + " alert('loaded');");
+				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
 		addDOMListeners();
 	}
 
