@@ -585,8 +585,17 @@ public class WebApp implements EventManager {
 //		}
 	}
 	
+	private String getContentType() {
+		Element docElem = document.getDocumentElement();
+		if ( docElem.getNodeName().equals("html") || docElem.getLocalName().equals("html") )
+			return "text/html";
+		if ( docElem.getNodeName().equals("svg") || docElem.getLocalName().equals("svg") )
+			return "image/svg+xml";
+		return "application/xml";
+	}
+	
 	private void sendEntireDocument(HttpServletResponse response) throws IOException {
-		response.setContentType("image/svg+xml");
+		response.setContentType(getContentType());
 //		response.setContentType("text/html");
 	    OutputStream out = response.getOutputStream();
       	DOMImplementationLS feature = (DOMImplementationLS) domImpl.getFeature("LS",
