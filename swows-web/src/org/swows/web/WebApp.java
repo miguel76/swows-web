@@ -184,16 +184,22 @@ public class WebApp implements EventManager {
 						new EventListener() {
 							@Override
 							public void handleEvent(Event event) {
-//								logger.debug("DOMAttrModified event of type " + ((MutationEvent) event).getAttrChange());
+								logger.trace("DOMAttrModified event of type " + ((MutationEvent) event).getAttrChange());
 								addAttrModify((MutationEvent) event);
 							}
 						},
 						false);
-//        ((EventTarget) xmlDoc)
-//				.addEventListener(
-//						"DOMCharacterDataModified",
-//						domEventListener,
-//						false);
+        ((EventTarget) document)
+				.addEventListener(
+						"DOMCharacterDataModified",
+						new EventListener() {
+							@Override
+							public void handleEvent(Event event) {
+								logger.trace("DOMCharacterDataModified event");
+								addCharacterDataModify((MutationEvent) event);
+							}
+						},
+						false);
 
 		logger.debug("Ended registering DOM mutation listeners");
 		
@@ -465,6 +471,16 @@ public class WebApp implements EventManager {
 					cmd = elemId + ".removeAttribute('" + event.getAttrName() + "')";
 				break;
 		}
+		if (cmd != null)
+			addClientCommand( cmd );
+	}
+	
+	private void addCharacterDataModify(MutationEvent event) {
+		if (!docLoadedOnClient)
+			return;
+		String elemId = clientNodeIdentifier((org.w3c.dom.Node) event.getTarget());
+		String cmd = null;
+		cmd = elemId + ".nodeValue = '" + ((MutationEvent) event).getNewValue() + "'";
 		if (cmd != null)
 			addClientCommand( cmd );
 	}
