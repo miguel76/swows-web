@@ -61,7 +61,7 @@ public class WebInput implements DomEventListener {
     
 //    private Map<MouseEvent,Set<Node>> event2domNodes = new HashMap<MouseEvent, Set<Node>>();
     
-	private Logger logger = Logger.getRootLogger();
+	private static final Logger logger = Logger.getLogger(WebInput.class);
 	
 //    private TimerTask localTimerTask = new TimerTask() {
 //		@Override

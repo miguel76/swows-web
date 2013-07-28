@@ -72,7 +72,7 @@ public class WebApp implements EventManager {
 //			"eval(req.responseText); "; 
 	private String jsCallbackBody; 
 	private static final String JS_TARGET_CB_FUNCTION = "var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t }; ";
-	private static final String CHARACTER_ENCODING = "UTF-8";
+	private static final String CHARACTER_ENCODING = "utf-8";
 	private static final String JS_CONTENT_TYPE = "application/javascript";
 	
 	private StringBuffer clientCommandsCache = null;
@@ -199,11 +199,18 @@ public class WebApp implements EventManager {
 		
 	}
 	
+	private void setOnload(String onloadBody) {
+		Element docElem = document.getDocumentElement();
+		if ( docElem.getNodeName().equals("html") || docElem.getLocalName().equals("html") )
+			((Element) docElem.getLastChild()).setAttribute("onload", onloadBody);
+//		((Element) docElem.getElementsByTagName("body").item(0)).setAttribute("onload", onloadBody);
+		if ( docElem.getNodeName().equals("svg") || docElem.getLocalName().equals("svg") )
+			docElem.setAttribute("onload", onloadBody);
+	}
+	
 	private void setDocument(Document newDocument) {
 		document = newDocument;
-		document.getDocumentElement().setAttribute(
-				"onload",
-				JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
+		setOnload( JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
 		addDOMListeners();
 	}
 
@@ -214,15 +221,15 @@ public class WebApp implements EventManager {
 		
 		jsCallbackBody =
 				"var reqTxt = '" +
-						"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
+						"@prefix evt: <http://www.swows.org/DOM/Events#> . " +
 						"_:newEvent a evt:Event; '; " +
 				"reqTxt += '" +
-						"evt:target <' + tn(evt.target).getAttribute('resource') + '>; " +
-						"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '>; " +
+						"evt:target <' + tn(evt.target).getAttribute('resource') + '> ; " +
+						"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '> ; " +
 						"evt:type \"' + evt.type + '\".'; " +
-				"var req = new XMLHttpRequest(); req.open('" + requestURL + "','',false); " +
+				"var req = new XMLHttpRequest(); req.open('POST','" + requestURL + "',false); " +
 				"req.send(reqTxt); " +
-				"eval(req.responseText); "; 
+				"eval(req.responseText); ";
 		
 		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
 			@Override

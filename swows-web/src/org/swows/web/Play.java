@@ -52,11 +52,13 @@ public class Play extends HttpServlet {
      		instCount.put(dataflowUri, countForUri);
     	}
     	WebApp webApp = null;
-    	if (instanceId > 0)
+//    	String newQueryString = queryString;
+    	if (instanceId >= 0)
     		webApp = mapForUri.get(instanceId);
     	else {
     		instanceId = countForUri.longValue();
     		countForUri++;
+//    		newQueryString += ("&inst=" + Long.toString(instanceId));
     		requestURL.append("&inst=").append(Long.toString(instanceId));
     	}
     	if (webApp == null) {
@@ -79,7 +81,11 @@ public class Play extends HttpServlet {
     		instanceId = Long.parseLong(instanceIdStr);
 //   		else
 //   			requestURL.append("&id=" + Long.toString(instanceId));
-    	return getWebApp(request.getSession(), dfUri, instanceId, request.getRequestURL());
+    	return getWebApp(
+    			request.getSession(),
+    			dfUri,
+    			instanceId,
+    			request.getRequestURL().append("?").append(request.getQueryString()) );
     }
     
 	/**
