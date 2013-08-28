@@ -57,7 +57,7 @@ public class WebApp implements EventManager {
 	private static final String JS_CALLBACK_FUNCTION_NAME = "swowsEvent";
 //	private static final String JS_CALLBACK_BODY =
 //			"var reqTxt = '" +
-//					"@prefix evt: <http://www.swows.org/DOM/Events#>. " +
+//					"@prefix evt: <http://www.swows.org/2013/07/xml-dom-events#>. " +
 //					"_:newEvent a evt:Event; '; " +
 ////			"for (var i = 0; i < evt.length; i++) { " +
 ////				"reqText += '<' + evt[i] + '>'; " +
