@@ -22,6 +22,7 @@ import org.swows.graph.events.DynamicGraphFromGraph;
 import org.swows.producer.DataflowProducer;
 import org.swows.runnable.RunnableContext;
 import org.swows.runnable.RunnableContextFactory;
+import org.swows.vocabulary.DOMEvents;
 import org.swows.vocabulary.SWI;
 import org.swows.xmlinrdf.DocumentReceiver;
 import org.swows.xmlinrdf.DomDecoder2;
@@ -31,6 +32,7 @@ import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
@@ -227,7 +229,7 @@ public class WebApp implements EventManager {
 		
 		jsCallbackBody =
 				"var reqTxt = '" +
-						"@prefix evt: <http://www.swows.org/DOM/Events#> . " +
+						"@prefix evt: <" + DOMEvents.getURI() + "> . " +
 						"_:newEvent a evt:Event; '; " +
 				"reqTxt += '" +
 						"evt:target <' + tn(evt.target).getAttribute('resource') + '> ; " +
@@ -460,9 +462,9 @@ public class WebApp implements EventManager {
 			case MutationEvent.ADDITION :
 			case MutationEvent.MODIFICATION :
 				if (nsURI != null)
-					cmd = elemId + ".setAttributeNS('" + nsURI + "','" + event.getAttrName() + "','" + event.getNewValue() + "')";
+					cmd = elemId + ".setAttributeNS('" + nsURI + "','" + event.getAttrName() + "','" + stringEncode(event.getNewValue()) + "')";
 				else
-					cmd = elemId + ".setAttribute('" + event.getAttrName() + "','" + event.getNewValue() + "')";
+					cmd = elemId + ".setAttribute('" + event.getAttrName() + "','" + stringEncode(event.getNewValue()) + "')";
 				break;
 			case MutationEvent.REMOVAL :
 				if (nsURI != null)
@@ -480,7 +482,7 @@ public class WebApp implements EventManager {
 			return;
 		String elemId = clientNodeIdentifier((org.w3c.dom.Node) event.getTarget());
 		String cmd = null;
-		cmd = elemId + ".nodeValue = '" + ((MutationEvent) event).getNewValue() + "'";
+		cmd = elemId + ".nodeValue = '" + stringEncode(((MutationEvent) event).getNewValue()) + "'";
 		if (cmd != null)
 			addClientCommand( cmd );
 	}
@@ -505,17 +507,21 @@ public class WebApp implements EventManager {
 					cmd = "var " + newNode2varName(newNode) + " = document.createElement('" + newNode.getNodeName() + "')";
 				break;
 			case(org.w3c.dom.Node.TEXT_NODE) :
-				cmd = "var " + newNode2varName(newNode) + " = document.createText('" + newNode.getNodeValue() + "')";
+				cmd = "var " + newNode2varName(newNode) + " = document.createText('" + stringEncode(newNode.getNodeValue()) + "')";
 				break;
 			case(org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE) :
 				cmd = "var " + newNode2varName(newNode) + " = document.createDocumentFragment()";
 				break;
 			case(org.w3c.dom.Node.COMMENT_NODE) :
-				cmd = "var " + newNode2varName(newNode) + " = document.createComment('" + newNode.getNodeValue() + "')";
+				cmd = "var " + newNode2varName(newNode) + " = document.createComment('" + stringEncode(newNode.getNodeValue()) + "')";
 				break;
 		}
 		if (cmd != null)
 			addClientCommand( cmd );
+	}
+	
+	private String stringEncode(String inputString) {
+		return inputString.replace("'", "\\'");
 	}
 
 	private String addCompleteNodeCreation(org.w3c.dom.Node newNode) {
@@ -542,9 +548,14 @@ public class WebApp implements EventManager {
 					Attr attr = (Attr) attrMap.item(attrIndex);
 					String attrNsURI = attr.getNamespaceURI();
 					if (attrNsURI != null)
-						cmd += "; " + varName + ".setAttributeNS('" + attrNsURI + "','" + attr.getName() + "','" + attr.getValue() + "')";
+						cmd += "; " + varName + ".setAttributeNS('" + attrNsURI + "','" + attr.getName() + "','" + stringEncode(attr.getValue()) + "')";
 					else
-						cmd += "; " + varName + ".setAttribute('" + attr.getName() + "','" + attr.getValue() + "')";
+						cmd += "; " + varName + ".setAttribute('" + attr.getName() + "','" + stringEncode(attr.getValue()) + "')";
+				}
+				NodeList children = newNode.getChildNodes();
+				for (int childIndex = 0; childIndex < children.getLength(); childIndex++) {
+					org.w3c.dom.Node child = children.item(childIndex);
+					cmd += "; " + varName + ".appendChild(" + addCompleteNodeCreation(child) + ")";
 				}
 //				NodeList children = newNode.getChildNodes();
 //				for (int childIndex = 0; childIndex < children.getLength(); childIndex++) {
@@ -552,13 +563,13 @@ public class WebApp implements EventManager {
 //				}
 				break;
 			case(org.w3c.dom.Node.TEXT_NODE) :
-				cmd = "var " + varName + " = document.createText('" + newNode.getNodeValue() + "')";
+				cmd = "var " + varName + " = document.createTextNode('" + stringEncode(newNode.getNodeValue()) + "')";
 				break;
 			case(org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE) :
 				cmd = "var " + varName + " = document.createDocumentFragment()";
 				break;
 			case(org.w3c.dom.Node.COMMENT_NODE) :
-				cmd = "var " + varName + " = document.createComment('" + newNode.getNodeValue() + "')";
+				cmd = "var " + varName + " = document.createComment('" + stringEncode(newNode.getNodeValue()) + "')";
 				break;
 		}
 		if (cmd != null)
