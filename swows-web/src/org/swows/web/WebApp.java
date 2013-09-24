@@ -571,10 +571,14 @@ public class WebApp implements EventManager {
 	private void addNodeInsert(MutationEvent event) {
 		if (!docLoadedOnClient)
 			return;
-		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
+		org.w3c.dom.Node node = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
-//		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + clientNodeIdentifier(childNode) + ")");
-		addClientCommand(clientNodeIdentifier(parentNode) + ".appendChild(" + addCompleteNodeCreation(childNode) + ")");
+		org.w3c.dom.Node nextSibling = node.getNextSibling();
+		addClientCommand(
+				clientNodeIdentifier(parentNode)
+				+ ( (nextSibling != null) ?
+						".insertBefore(" + addCompleteNodeCreation(node) + "," + clientNodeIdentifier(nextSibling) + ")" :
+						".appendChild(" + addCompleteNodeCreation(node) + ")" ) );
 	}
 
 	private void addNodeRemoval(MutationEvent event) {
