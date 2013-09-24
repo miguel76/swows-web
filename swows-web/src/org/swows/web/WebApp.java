@@ -25,7 +25,7 @@ import org.swows.runnable.RunnableContextFactory;
 import org.swows.vocabulary.DOMEvents;
 import org.swows.vocabulary.SWI;
 import org.swows.xmlinrdf.DocumentReceiver;
-import org.swows.xmlinrdf.DomDecoder2;
+import org.swows.xmlinrdf.DomDecoder;
 import org.swows.xmlinrdf.EventManager;
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMImplementation;
@@ -312,7 +312,7 @@ public class WebApp implements EventManager {
 //		domEventListeners.put("mouseup", domEventListenerSet);
                 
 		setDocument(
-				DomDecoder2.decodeOne(
+				DomDecoder.decodeOne(
 						cachingGraph,
 //						outputGraph,
 //						new LoggingGraph(cachingGraph, Logger.getRootLogger(), true, true),
@@ -374,18 +374,6 @@ public class WebApp implements EventManager {
 		// TODO Auto-generated method stub
 		
 	}
-	
-//	private String clientElementIdentifier(Element element) {
-//		NamedNodeMap attrs = element.getAttributes();
-//		for (int attrIndex = 0; attrIndex < attrs.getLength(); attrIndex++ ) {
-//			Attr attr = (Attr) attrs.item(attrIndex);
-//			if (attr.isId() 
-//					|| attr.getName().equalsIgnoreCase("id") // TODO: delete this two lines of workaround and find better way to manage id attrs
-//					|| attr.getName().equals("xml:id") )
-//				return "document.getElementById('" + attr.getValue() + "')";
-//		}
-//		return "boh"; // TODO: extend it to uniquely identify each node via its path from nearest ancestor with id
-//	}
 	
 	private String clientNodeIdentifier(org.w3c.dom.Node node) {
 		String varName = node2varName(node);
