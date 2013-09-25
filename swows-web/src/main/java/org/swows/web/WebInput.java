@@ -111,87 +111,52 @@ public class WebInput implements DomEventListener {
 			this.eventResource = eventResource;
 		}
 		
-		@Override
 		public boolean getBubbles() {
 			// TODO Auto-generated method stub
 			return false;
 		}
 
-		@Override
 		public boolean getCancelable() {
 			// TODO Auto-generated method stub
 			return false;
 		}
 
-		@Override
 		public EventTarget getCurrentTarget() {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
-		@Override
-		public boolean getDefaultPrevented() {
-			// TODO Auto-generated method stub
-			return false;
-		}
-
-		@Override
 		public short getEventPhase() {
 			// TODO Auto-generated method stub
 			return 0;
 		}
 
-		@Override
-		public String getNamespaceURI() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
 		public EventTarget getTarget() {
 			// TODO Auto-generated method stub
 			eventResource.getRequiredProperty(DOMEvents.target);
 			return null;
 		}
 
-		@Override
 		public long getTimeStamp() {
 			// TODO Auto-generated method stub
 			return 0;
 		}
 
-		@Override
 		public String getType() {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
-		@Override
 		public void initEvent(String arg0, boolean arg1, boolean arg2) {
 			// TODO Auto-generated method stub
 			
 		}
 
-		@Override
-		public void initEventNS(String arg0, String arg1, boolean arg2,
-				boolean arg3) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
 		public void preventDefault() {
 			// TODO Auto-generated method stub
 			
 		}
 
-		@Override
-		public void stopImmediatePropagation() {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
 		public void stopPropagation() {
 			// TODO Auto-generated method stub
 			
@@ -225,11 +190,9 @@ public class WebInput implements DomEventListener {
 		logger.debug("Launching update thread... ");
 //		LocalTimer.get().schedule(
 //				new TimerTask() {
-//					@Override
-//					public void run() {
+//			//					public void run() {
 						RunnableContextFactory.getDefaultRunnableContext().run(
 								new Runnable() {
-									@Override
 									public void run() {
 										logger.debug("Sending update events ... ");
 										eventGraph.sendUpdateEvents();
@@ -241,7 +204,6 @@ public class WebInput implements DomEventListener {
 //		logger.debug("Update thread launched!");
 	}
 	
-	@Override
 	public synchronized void handleEvent(Event event, Node currentTargetGraphNode , Node targetGraphNode) {
 		Resource eventResource = ((EventWithDescriptor) event).eventResource;
 		buildGraph();
@@ -252,11 +214,9 @@ public class WebInput implements DomEventListener {
 		logger.debug("Launching update thread... ");
 		LocalTimer.get().schedule(
 				new TimerTask() {
-					@Override
 					public void run() {
 						RunnableContextFactory.getDefaultRunnableContext().run(
 								new Runnable() {
-									@Override
 									public void run() {
 										logger.debug("Sending update events ... ");
 										eventGraph.sendUpdateEvents();

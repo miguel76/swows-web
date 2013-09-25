@@ -139,7 +139,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMNodeInserted",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.debug("DOMNodeInserted event");
 								addNodeInsert((MutationEvent) event);
@@ -150,7 +149,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMNodeRemoved",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.debug("DOMNodeRemoved event");
 								addNodeRemoval((MutationEvent) event);
@@ -161,7 +159,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMNodeRemovedFromDocument",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.debug("DOMNodeRemovedFromDocument event");
 								addNodeRemovalFromDoc((MutationEvent) event);
@@ -172,7 +169,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMNodeInsertedIntoDocument",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.debug("DOMNodeInsertedIntoDocument event");
 								addNodeCreation((MutationEvent) event);
@@ -184,7 +180,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMAttrModified",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.trace("DOMAttrModified event of type " + ((MutationEvent) event).getAttrChange());
 								addAttrModify((MutationEvent) event);
@@ -195,7 +190,6 @@ public class WebApp implements EventManager {
 				.addEventListener(
 						"DOMCharacterDataModified",
 						new EventListener() {
-							@Override
 							public void handleEvent(Event event) {
 								logger.trace("DOMCharacterDataModified event");
 								addCharacterDataModify((MutationEvent) event);
@@ -240,7 +234,6 @@ public class WebApp implements EventManager {
 				"eval(req.responseText); ";
 		
 		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
-			@Override
 			public synchronized void run(final Runnable runnable) {
 //				try {
 //					while (!docLoadedOnClient || cachingGraph == null) Thread.yield();
@@ -346,7 +339,6 @@ public class WebApp implements EventManager {
 //								}).start();
 //							}
 //							private Document newDocument = null;
-							@Override
 							public void sendDocument(Document doc) {
 								setDocument(doc);
 								docLoadedOnClient = false;
@@ -425,7 +417,6 @@ public class WebApp implements EventManager {
 		return buffer.toString();
 	}
 	
-	@Override
 	public void addEventListener(
 			Node targetNode, org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
@@ -589,7 +580,6 @@ public class WebApp implements EventManager {
 		addClientCommand(clientNodeIdentifier(parentNode) + ".removeChild(" + clientNodeIdentifier(childNode) + ")");
 	}
 
-	@Override
 	public void removeEventListener(
 			Node targetNode, org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {

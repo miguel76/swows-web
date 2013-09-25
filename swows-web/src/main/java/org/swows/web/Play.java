@@ -37,8 +37,8 @@ public class Play extends HttpServlet {
     		webAppMap = (Map<String,Map<Long,WebApp>>) session.getAttribute(WEB_APP_MAPP_ATTR_NAME);
     		instCount = (Map<String,Long>) session.getAttribute(INST_COUNT_ATTR_NAME);
     		if (webAppMap == null) {
-    			webAppMap = new HashMap<>();
-    			instCount = new HashMap<>();
+    			webAppMap = new HashMap<String,Map<Long,WebApp>>();
+    			instCount = new HashMap<String,Long>();
     			session.setAttribute(WEB_APP_MAPP_ATTR_NAME, webAppMap);
     			session.setAttribute(INST_COUNT_ATTR_NAME, instCount);
     		}
@@ -46,7 +46,7 @@ public class Play extends HttpServlet {
     	Map<Long,WebApp> mapForUri = webAppMap.get(dataflowUri);
    		Long countForUri = instCount.get(dataflowUri);
     	if (mapForUri == null) {
-    		mapForUri = new HashMap<>();
+    		mapForUri = new HashMap<Long,WebApp>();
     		countForUri = 0l;
      		webAppMap.put(dataflowUri, mapForUri);
      		instCount.put(dataflowUri, countForUri);
