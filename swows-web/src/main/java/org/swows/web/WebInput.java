@@ -161,6 +161,31 @@ public class WebInput implements DomEventListener {
 			// TODO Auto-generated method stub
 			
 		}
+
+		@Override
+		public boolean getDefaultPrevented() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public String getNamespaceURI() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void initEventNS(String arg0, String arg1, boolean arg2,
+				boolean arg3) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void stopImmediatePropagation() {
+			// TODO Auto-generated method stub
+			
+		}
 		
 	}
 	
