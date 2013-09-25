@@ -10,5 +10,10 @@
   		<artifactId>swows</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
+  	<dependency>
+  		<groupId>javax</groupId>
+  		<artifactId>javaee-web-api</artifactId>
+  		<version>7.0</version>
+  	</dependency>
   </dependencies>
 </project>
