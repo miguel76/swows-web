@@ -3,17 +3,18 @@
   <groupId>org.swows</groupId>
   <artifactId>swows-web</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <packaging>war</packaging>
   <dependencies>
+  	<dependency>
+  		<groupId>javax</groupId>
+  		<artifactId>javaee-web-api</artifactId>
+  		<version>7.0</version>
+  		<scope>provided</scope>
+  	</dependency>
   	<dependency>
   		<groupId>org.swows</groupId>
   		<artifactId>swows</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
-  	<dependency>
-  		<groupId>javax</groupId>
-  		<artifactId>javaee-web-api</artifactId>
-  		<version>7.0</version>
-  	</dependency>
   </dependencies>
+  <packaging>war</packaging>
 </project>
