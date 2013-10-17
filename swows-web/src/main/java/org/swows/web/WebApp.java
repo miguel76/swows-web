@@ -407,6 +407,15 @@ public class WebApp implements EventManager {
 		return "";
 	}
 	
+	private String genAddEventListeners(org.w3c.dom.Node target) {
+		StringBuffer buffer = new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
+		for (String type : listenedNodeAndTypes.get(target))
+			buffer
+					.append( genAddEventListener(target, type, false) )
+					.append( CLIENT_COMMANDS_SEP ); // TODO: manage useCapture if to be used at all
+		return buffer.toString();
+	}
+	
 	private String genAddEventListeners() {
 		StringBuffer buffer = new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
 		for (org.w3c.dom.Node target : listenedNodeAndTypes.keySet())
@@ -427,8 +436,10 @@ public class WebApp implements EventManager {
 			listenedNodeAndTypes.put(target, listenedTypesForTarget);
 		}
 		listenedTypesForTarget.add(type);
-		if (docLoadedOnClient)
-			addClientCommand( genAddEventListener(target, type, useCapture) );
+		if (docLoadedOnClient) {
+			((Element) target).setAttribute("on" + type, JS_CALLBACK_FUNCTION_NAME + "(event)");
+//			addClientCommand( genAddEventListener(target, type, useCapture) );
+		}
 	}
 
 	private void addAttrModify(MutationEvent event) {
@@ -540,6 +551,8 @@ public class WebApp implements EventManager {
 //				for (int childIndex = 0; childIndex < children.getLength(); childIndex++) {
 //					
 //				}
+				if (listenedNodeAndTypes.containsKey(newNode))
+					cmd += "; " + genAddEventListeners(newNode);
 				break;
 			case(org.w3c.dom.Node.TEXT_NODE) :
 				cmd = "var " + varName + " = document.createTextNode('" + stringEncode(newNode.getNodeValue()) + "')";
