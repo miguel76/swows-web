@@ -430,6 +430,7 @@ public class WebApp implements EventManager {
 			Node targetNode, org.w3c.dom.Node target, String type,
 			EventListener listener, boolean useCapture) {
 //			((Element) target).setAttribute("on" + type, JS_CALLBACK);
+		logger.trace("addEventListener() called");
 		Set<String> listenedTypesForTarget = listenedNodeAndTypes.get(target);
 		if (listenedTypesForTarget == null) {
 			listenedTypesForTarget = new HashSet<String>();
@@ -437,8 +438,13 @@ public class WebApp implements EventManager {
 		}
 		listenedTypesForTarget.add(type);
 		if (docLoadedOnClient) {
-			((Element) target).setAttribute("on" + type, JS_CALLBACK_FUNCTION_NAME + "(event)");
-//			addClientCommand( genAddEventListener(target, type, useCapture) );
+//			String clientNodeId = clientNodeIdentifier(target);
+//			if (clientNodeId != null) {
+//				addClientCommand( genAddEventListener(target, type, useCapture) );
+//			} else {
+				logger.trace("setting attribute on" + type + ":" + JS_CALLBACK_FUNCTION_NAME + "(event)");
+				((Element) target).setAttribute("on" + type, JS_CALLBACK_FUNCTION_NAME + "(event)");
+//			}
 		}
 	}
 
