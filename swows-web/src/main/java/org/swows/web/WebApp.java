@@ -73,7 +73,36 @@ public class WebApp implements EventManager {
 ////			"alert(req.responseText); " +
 //			"eval(req.responseText); "; 
 	private String jsCallbackBody; 
-	private static final String JS_TARGET_CB_FUNCTION = "var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t }; ";
+	private static final String JS_TARGET_CB_FUNCTION =
+			"var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t; }; " +
+		    "var res = function (obj) { " +
+		    	"switch(typeof obj) { " +
+		    		"case 'boolean': " +
+		    		"case 'number': " +
+		    			"return obj; " +
+		    		"case 'string': " +
+		    		"case 'xml': " +
+		    			"return '\"' + obj + '\"'; " +
+		    		"case 'object': " +
+		    			"return (obj instanceof Node) " + 
+		    				"? ( '<' + tn(obj).getAttribute('resource') + '>' ) " +
+		    				": ( (obj instanceof Number || obj instanceof Boolean) " +
+		    					"? obj " +
+		    					": ( (obj instanceof String) " +
+		    						"? ('\"' + obj + '\"') " +
+		    						": ( (obj instanceof Object) " +
+		    							"? ('[ ' + predList(obj) + ' ]') " +
+		    							": ('\"' + obj + '\"') ) ) ) ; " +
+		    		"default: " +
+		    			"return '\"' + obj + '\"'; " +
+		    	"} " +
+		    "}; " +
+		    "var predList = function (obj) { " +
+		    	"return Object.keys(obj) " +
+	            	".filter(function(k) {return !(obj[k] == undefined);}) " +
+	            	".map(function(k) { return 'evt:' + k + ' ' + res(obj[k]) + ' '; }).join('; '); " +
+	         "}; ";
+			
 	private static final String CHARACTER_ENCODING = "utf-8";
 	private static final String JS_CONTENT_TYPE = "application/javascript";
 	
@@ -225,10 +254,7 @@ public class WebApp implements EventManager {
 				"var reqTxt = '" +
 						"@prefix evt: <" + DOMEvents.getURI() + "> . " +
 						"_:newEvent a evt:Event; '; " +
-				"reqTxt += '" +
-						"evt:target <' + tn(evt.target).getAttribute('resource') + '> ; " +
-						"evt:currentTarget <' + tn(evt.currentTarget).getAttribute('resource') + '> ; " +
-						"evt:type \"' + evt.type + '\".'; " +
+				"reqTxt += predList(evt) + ' .'; " +
 				"var req = new XMLHttpRequest(); req.open('POST','" + requestURL + "',false); " +
 				"req.send(reqTxt); " +
 				"eval(req.responseText); ";
