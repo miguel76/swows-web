@@ -91,7 +91,8 @@ public class WebApp implements EventManager {
 		    					": ( (obj instanceof String) " +
 		    						"? ('\"' + obj + '\"') " +
 		    						": ( (obj instanceof Object) " +
-		    							"? ('[ ' + predList(obj) + ' ]') " +
+		    							"? ('\"' + obj + '\"') " +
+//		    							"? ('[ ' + predList(obj) + ' ]') " +
 		    							": ('\"' + obj + '\"') ) ) ) ; " +
 		    		"default: " +
 		    			"return '\"' + obj + '\"'; " +
@@ -106,7 +107,10 @@ public class WebApp implements EventManager {
 	private static final String CHARACTER_ENCODING = "utf-8";
 	private static final String JS_CONTENT_TYPE = "application/javascript";
 	
-	private StringBuffer clientCommandsCache = null;
+//	private StringBuffer clientCommandsCache = null;
+	private StringBuffer clientAddCommandsCache = null;
+	private StringBuffer clientChangeCommandsCache = null;
+	private StringBuffer clientRemoveCommandsCache = null;
 	private static final int CLIENT_COMMANDS_CACHE_CAPACITY = 256;
 	private static final String CLIENT_COMMANDS_SEP = ";";
 	
@@ -114,7 +118,9 @@ public class WebApp implements EventManager {
 	private Map<org.w3c.dom.Node, Integer> newNodeIds;
 	
 	private void resetCommandSet() {
-		clientCommandsCache = null;
+		clientAddCommandsCache = null;
+		clientChangeCommandsCache = null;
+		clientRemoveCommandsCache = null;
 		newNodeCount = 0;
 		newNodeIds = null;
 	}
@@ -144,13 +150,43 @@ public class WebApp implements EventManager {
 	// Client-side: https://github.com/dankogai/js-deflate
 	// Maybe for http is possible to use browser native decompression
 	
-	private void addClientCommand(String command) {
+//	private void addClientCommand(String command) {
+//		if (command != null) {
+//			if (clientCommandsCache == null)
+//				clientCommandsCache =
+//						new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
+//			clientCommandsCache.append(command);
+//			clientCommandsCache.append(CLIENT_COMMANDS_SEP);
+//		}
+//	}
+//	
+	private void addClientAddCommand(String command) {
 		if (command != null) {
-			if (clientCommandsCache == null)
-				clientCommandsCache =
+			if (clientAddCommandsCache == null)
+				clientAddCommandsCache =
 						new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
-			clientCommandsCache.append(command);
-			clientCommandsCache.append(CLIENT_COMMANDS_SEP);
+			clientAddCommandsCache.append(command);
+			clientAddCommandsCache.append(CLIENT_COMMANDS_SEP);
+		}
+	}
+	
+	private void addClientChangeCommand(String command) {
+		if (command != null) {
+			if (clientChangeCommandsCache == null)
+				clientChangeCommandsCache =
+						new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
+			clientChangeCommandsCache.append(command);
+			clientChangeCommandsCache.append(CLIENT_COMMANDS_SEP);
+		}
+	}
+	
+	private void addClientRemoveCommand(String command) {
+		if (command != null) {
+			if (clientRemoveCommandsCache == null)
+				clientRemoveCommandsCache =
+						new StringBuffer(CLIENT_COMMANDS_CACHE_CAPACITY);
+			clientRemoveCommandsCache.append(command);
+			clientRemoveCommandsCache.append(CLIENT_COMMANDS_SEP);
 		}
 	}
 	
@@ -241,7 +277,9 @@ public class WebApp implements EventManager {
 	
 	private void setDocument(Document newDocument) {
 		document = newDocument;
-		setOnload( JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
+//		setOnload( JS_TARGET_CB_FUNCTION + "var " + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
+		setOnload( JS_TARGET_CB_FUNCTION + JS_CALLBACK_FUNCTION_NAME + " = function (evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
+//		setOnload( JS_TARGET_CB_FUNCTION + "function " + JS_CALLBACK_FUNCTION_NAME + "(evt) { " + jsCallbackBody +" }; " + genAddEventListeners() );
 		addDOMListeners();
 	}
 
@@ -496,7 +534,7 @@ public class WebApp implements EventManager {
 				break;
 		}
 		if (cmd != null)
-			addClientCommand( cmd );
+			addClientChangeCommand( cmd );
 	}
 	
 	private void addCharacterDataModify(MutationEvent event) {
@@ -506,7 +544,7 @@ public class WebApp implements EventManager {
 		String cmd = null;
 		cmd = elemId + ".nodeValue = '" + stringEncode(((MutationEvent) event).getNewValue()) + "'";
 		if (cmd != null)
-			addClientCommand( cmd );
+			addClientChangeCommand( cmd );
 	}
 	
 	private void addNodeCreation(MutationEvent event) {
@@ -539,7 +577,7 @@ public class WebApp implements EventManager {
 				break;
 		}
 		if (cmd != null)
-			addClientCommand( cmd );
+			addClientAddCommand( cmd );
 	}
 	
 	private String stringEncode(String inputString) {
@@ -597,7 +635,7 @@ public class WebApp implements EventManager {
 				break;
 		}
 		if (cmd != null)
-			addClientCommand( cmd );
+			addClientAddCommand( cmd );
 		return varName;
 	}
 
@@ -610,7 +648,7 @@ public class WebApp implements EventManager {
 		org.w3c.dom.Node node = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
 		org.w3c.dom.Node nextSibling = node.getNextSibling();
-		addClientCommand(
+		addClientAddCommand(
 				clientNodeIdentifier(parentNode)
 				+ ( (nextSibling != null) ?
 						".insertBefore(" + addCompleteNodeCreation(node) + "," + clientNodeIdentifier(nextSibling) + ")" :
@@ -622,7 +660,7 @@ public class WebApp implements EventManager {
 			return;
 		org.w3c.dom.Node childNode = (org.w3c.dom.Node) event.getTarget();
 		org.w3c.dom.Node parentNode = (org.w3c.dom.Node) event.getRelatedNode();
-		addClientCommand(clientNodeIdentifier(parentNode) + ".removeChild(" + clientNodeIdentifier(childNode) + ")");
+		addClientAddCommand(clientNodeIdentifier(parentNode) + ".removeChild(" + clientNodeIdentifier(childNode) + ")");
 	}
 
 	public void removeEventListener(
@@ -637,7 +675,7 @@ public class WebApp implements EventManager {
 //		if (target instanceof Element) {
 //			((Element) target).removeAttribute("on" + type);
 			if (docLoadedOnClient)
-				addClientCommand(
+				addClientRemoveCommand(
 						clientNodeIdentifier(target)
 								+ ".removeEventListener( '"
 								+ type + "', "
@@ -689,11 +727,14 @@ public class WebApp implements EventManager {
 	    }
 	    webInput.handleEvent(eventSB.toString());
 	    
-	    if (clientCommandsCache != null) {
-	    	writer.write(clientCommandsCache.toString());
-	    	resetCommandSet();
-		    writer.flush();
-	    }	    
+	    if (clientRemoveCommandsCache != null)
+	    	writer.write(clientRemoveCommandsCache.toString());
+	    if (clientChangeCommandsCache != null)
+	    	writer.write(clientChangeCommandsCache.toString());
+	    if (clientAddCommandsCache != null)
+	    	writer.write(clientAddCommandsCache.toString());
+    	resetCommandSet();
+	    writer.flush();
 	    // copying input to output just to test it
 	    //writer.write(eventSB.toString());
 //	    writer.flush();
