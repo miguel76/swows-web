@@ -85,7 +85,7 @@ public class WebApp implements EventManager {
 		    			"return '\"' + obj + '\"'; " +
 		    		"case 'object': " +
 		    			"return (obj instanceof Node) " + 
-		    				"? ( '<' + tn(obj).getAttribute('resource') + '>' ) " +
+		    				"? ( '<' + obj.getAttribute('resource') + '>' ) " +
 		    				": ( (obj instanceof Number || obj instanceof Boolean) " +
 		    					"? obj " +
 		    					": ( (obj instanceof String) " +
@@ -101,7 +101,7 @@ public class WebApp implements EventManager {
 		    "var predList = function (obj) { " +
 		    	"return Object.keys(obj) " +
 	            	".filter(function(k) {return !(obj[k] == undefined);}) " +
-	            	".map(function(k) { return 'evt:' + k + ' ' + res(obj[k]) + ' '; }).join('; '); " +
+	            	".map(function(k) { return 'evt:' + k + ' ' + res(tn(obj[k])) + ' '; }).join('; '); " +
 	         "}; ";
 			
 	private static final String CHARACTER_ENCODING = "utf-8";
