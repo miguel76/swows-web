@@ -74,6 +74,30 @@ public class WebApp implements EventManager {
 //			"eval(req.responseText); "; 
 	private String jsCallbackBody; 
 	private static final String JS_TARGET_CB_FUNCTION =
+			"var evtQueue = []; " +
+			"var evtsByTargetAndType = {}; " +
+			"var addEvtToQueue = function (evt) { " +
+	    		"var evtsByType = evtsByTargetAndType[evt.target]; " +
+	    		"if (evtsByType) { " +
+	    			"var prevEvt = evtsByType[evt.type]; " +
+    		    "} else { " +
+    		    	"var evtsByType = []; " +
+    	    		"evtsByTargetAndType[evt.target] = evtsByType; " +
+    		    "}; " +
+	    		"if (prevEvt) { " +
+	    			"evtQueue[evtQueue.indexOf(prevEvt)] = evt; " +
+	    		"} else { " +
+	    			"evtQueue.push(evt); " +
+	    		"}; " +
+	    		"evtsByType[evt.type] = evt; " +
+		    "}; " +
+			"var evtFromQueue = function (evt) { " +
+				"var evt = evtQueue.shift(); " +
+	    		"var evtsByType = evtsByTargetAndType[evt.target]; " +
+    			"delete evtsByType[evt.type]; " +
+    			"if (evtsByType.length == 0) delete evtsByTargetAndType[evt.target]; " +
+				"return evt; " +
+    		"}; " +
 			"var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t; }; " +
 		    "var res = function (obj) { " +
 		    	"switch(typeof obj) { " +
