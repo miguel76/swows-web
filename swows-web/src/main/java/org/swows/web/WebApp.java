@@ -99,7 +99,9 @@ public class WebApp implements EventManager {
 				"return evt; " +
     		"}; " +
 			"var tn = function (t) { return t.correspondingUseElement ? t.correspondingUseElement : t; }; " +
-		    "var res = function (obj) { " +
+		    "var genObj = function (obj, foundObjs) { " +
+		    "}; " +
+		    "var res = function (obj, foundObjs) { " +
 		    	"switch(typeof obj) { " +
 		    		"case 'boolean': " +
 		    		"case 'number': " +
@@ -116,16 +118,16 @@ public class WebApp implements EventManager {
 		    						"? ('\"' + obj + '\"') " +
 		    						": ( (obj instanceof Object) " +
 		    							"? ('\"' + obj + '\"') " +
-//		    							"? ('[ ' + predList(obj) + ' ]') " +
+//		    							"? ('[ ' + predList(obj, foundObjs) + ' ]') " +
 		    							": ('\"' + obj + '\"') ) ) ) ; " +
 		    		"default: " +
 		    			"return '\"' + obj + '\"'; " +
 		    	"} " +
 		    "}; " +
-		    "var predList = function (obj) { " +
+		    "var predList = function (obj, foundObjs) { " +
 		    	"return Object.keys(obj) " +
 	            	".filter(function(k) {return !(obj[k] == undefined);}) " +
-	            	".map(function(k) { return 'evt:' + k + ' ' + res(tn(obj[k])) + ' '; }).join('; '); " +
+	            	".map(function(k) { return 'evt:' + k + ' ' + res(tn(obj[k], foundObjs)) + ' '; }).join('; '); " +
 	         "}; ";
 			
 	private static final String CHARACTER_ENCODING = "utf-8";
@@ -315,7 +317,7 @@ public class WebApp implements EventManager {
 		jsCallbackBody =
 				"var reqTxt = '" +
 						"@prefix evt: <" + DOMEvents.getURI() + "> . " +
-						"_:newEvent a evt:Event; '; " +
+						"<#event_' + evt.timeStamp + '> a evt:Event; '; " +
 				"reqTxt += predList(evt) + ' .'; " +
 				"var req = new XMLHttpRequest(); req.open('POST','" + requestURL + "',false); " +
 				"req.send(reqTxt); " +
