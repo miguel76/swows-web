@@ -14,6 +14,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.log4j.Logger;
 import org.swows.graph.DynamicDatasetMap;
 import org.swows.graph.EventCachingGraph;
@@ -608,7 +609,8 @@ public class WebApp implements EventManager {
 	}
 	
 	private String stringEncode(String inputString) {
-		return inputString.replace("'", "\\'");
+//		return inputString.replace("'", "\\'");
+		return StringEscapeUtils.escapeJavaScript(inputString);
 	}
 
 	private String addCompleteNodeCreation(org.w3c.dom.Node newNode) {
