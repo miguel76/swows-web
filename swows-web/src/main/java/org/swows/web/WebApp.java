@@ -321,7 +321,8 @@ public class WebApp implements EventManager {
 				"reqTxt += predList(evt) + ' .'; " +
 				"var req = new XMLHttpRequest(); req.open('POST','" + requestURL + "',false); " +
 				"req.send(reqTxt); " +
-				"eval(req.responseText); ";
+				"eval(req.responseText); " +
+				"evt.preventDefault(); ";
 		
 		RunnableContextFactory.setDefaultRunnableContext(new RunnableContext() {
 			public synchronized void run(final Runnable runnable) {
