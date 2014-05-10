@@ -11,7 +11,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.jena.riot.RDFDataMgr;
+import org.swows.reader.RDFDataMgr;
+
+import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.sparql.graph.GraphFactory;
 
 /**
  * Servlet implementation class InitialContentServlet
@@ -62,7 +65,9 @@ public class Play extends HttpServlet {
     		requestURL.append("&inst=").append(Long.toString(instanceId));
     	}
     	if (webApp == null) {
-    		webApp = new WebApp(RDFDataMgr.loadGraph(dataflowUri),requestURL.toString());
+            Graph graph = GraphFactory.createDefaultGraph();
+            RDFDataMgr.read(graph, dataflowUri, dataflowUri, null, null);
+    		webApp = new WebApp(graph,requestURL.toString());
     		mapForUri.put(instanceId, webApp);
     	}
     	return webApp;
